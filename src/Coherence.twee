@@ -12,15 +12,18 @@ Coherence
 }
 
 
+:: StoryInit {"position":"575,325","size":"100,100"}
+<<set $isDoorLocked = true>>
+
 :: Entryway {"position":"800,325","size":"100,100"}
-In this room, you see a single door, leading north, with a console next to it. The console has various controls, including a prominent lever, but everything is in disrepair,
+In this room, you see a single door, leading north, with a console next to it. The console has various controls, including a prominent lever, but everything is in disrepair.
 
 * [[Go through the door|Hallway]]
 * [[Inspect the console|Entryway Console]]
 * <<link "Pull the lever">>
+    <<set $seenLeverJammed = true >>
     <<replace "#outcome">>
         The lever has jammed and cannot be pulled.
-        <<set $seenLeverJammed = true >>
     <<endreplace>>
 <</link>>
 
@@ -35,6 +38,7 @@ The console
 
 :: Hallway {"position":"925,450","size":"100,100"}
 You enter a hallway of sorts. There is a door leading North and another leading East. Neither are have any label indicating where they lead.
+The south door returns to the Entryway.
 
 * <<link "Open the North door">>
 <<if $isDoorLocked>>
@@ -47,13 +51,11 @@ You enter a hallway of sorts. There is a door leading North and another leading 
 <</if>>
 <</link>>
 * [[Open the East door|Travel Chamber]]
+* [[Return to the Entryway|Entryway]]
 
 
 <span id="outcome"></span>
 
-
-:: StoryInit {"position":"575,325","size":"100,100"}
-<<set $isDoorLocked = true>>
 
 
 :: Travel Chamber {"position":"925,575","size":"100,100"}

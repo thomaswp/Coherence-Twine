@@ -1,0 +1,21 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Build Twine",
+      "type": "shell",
+      "command": "tweego",
+      "args": [
+        "src/",
+        "-o",
+        "Coherence.html",
+        "-t"
+      ],
+      "group": {
+        "kind": "build",
+        "isDefault": true
+      },
+      "problemMatcher": []
+    }
+  ]
+}

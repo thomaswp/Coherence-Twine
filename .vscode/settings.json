@@ -1,3 +1,16 @@
 {
-    "twee3LanguageTools.storyformat.current": "sugarcube-2"
+    "twee3LanguageTools.storyformat.current": "sugarcube-2",
+    "emeraldwalk.runonsave": {
+        "commands": [
+            {
+                "match": ".*\\.(twee)|(js)$",
+                "cmd": "tweego src/ -o Coherence.html -t"
+            }
+        ]
+    },
+    "liveServer.settings.ignoreFiles": [
+        "**/*.tw",
+        "**/*.twee",
+        "**/*.js"
+    ]
 }

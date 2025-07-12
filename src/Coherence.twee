@@ -24,16 +24,25 @@ In this room, you see a single door, leading north, with a console next to it. T
     <<set $seenLeverJammed = true >>
     <<replace "#outcome">>
         The lever has jammed and cannot be pulled.
-    <<endreplace>>
+    <</replace>>
 <</link>>
 
 <span id="outcome"></span>
 
 
 :: Entryway Console {"position":"800,450","size":"100,100"}
-The console 
+The console has a note affixed that reads:
 
-> 
+> ''[T-380] Edward'': Lisa, this is a bit embarassing, but I think I was a bit overzealous with the isolation door lever here. I'll fix it soon (yes, I know, a word with strange meaning around here), but I have to finish this sim first. If you need to get in before then, you might want to jump back here <<link "⌇⎅⍾⍙☊⎅⌇">>
+<<set $hasTime380 = true>>
+<<replace #outcome>>
+    You copy down the code.
+<</replace>>
+<</link>>.
+
+<span id="outcome"></span>
+
+<<back>>
 
 
 :: Hallway {"position":"925,450","size":"100,100"}
@@ -45,18 +54,31 @@ The south door returns to the Entryway.
     <<set $seenDoorLocked = true >>
     <<replace "#outcome">>
         The door is locked.
-    <<endreplace>>
+    <</replace>>
 <<else>>
     <<goto "Goal Room">>
 <</if>>
 <</link>>
-* [[Open the East door|Travel Chamber]]
+* [[Open the East door|Travel Room]]
 * [[Return to the Entryway|Entryway]]
 
 
 <span id="outcome"></span>
 
 
+:: Travel Room {"position":"925,575","size":"100,100"}
 
-:: Travel Chamber {"position":"925,575","size":"100,100"}
+You enter a circular chamber with what could almost be an elevator in the middle. The chamber is open. To the East there is another door.
+
+* [[Enter the chamber|Travel Chamber]]
+* [[Go West to the Hallway|Hallway]]
+* [[Go through the East door|Lab]]
+
+:: Travel Chamber
+The chamber lacks 
+
+:: Lab
+
+:: Goal Chamber
+Success!!
 

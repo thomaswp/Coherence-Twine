@@ -12,5 +12,8 @@
         "**/*.tw",
         "**/*.twee",
         "**/*.js"
+    ],
+    "cSpell.words": [
+        "ifid"
     ]
 }

@@ -1,0 +1,6 @@
+sugarcube-2:
+  macros:
+    init-vars:
+      name: init-vars
+    soft-reset:
+      name: soft-reset

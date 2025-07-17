@@ -104,76 +104,79 @@ var LZString=function(){var r=String.fromCharCode,o="ABCDEFGHIJKLMNOPQRSTUVWXYZa
 		<div id="init-lacking"><p>Browser lacks capabilities required to play.</p><p>Upgrade or switch to another browser.</p></div>
 		<div id="init-loading"><div>Loading&hellip;</div></div>
 	</div>
-	<!-- UUID://A4B57A38-4020-453D-90AD-DB8E4655C6C0// --><tw-storydata name="Coherence" startnode="4" creator="Tweego" creator-version="2.1.1+81d1d71" ifid="A4B57A38-4020-453D-90AD-DB8E4655C6C0" zoom="1" format="SugarCube" format-version="2.37.3" options="debug" hidden><style role="stylesheet" id="twine-user-stylesheet" type="text/twine-css"></style><script role="script" id="twine-user-script" type="text/twine-javascript">Config.saves.maxAutoSaves = 1;
+	<!-- UUID://A4B57A38-4020-453D-90AD-DB8E4655C6C0// --><tw-storydata name="Coherence" startnode="4" creator="Tweego" creator-version="2.1.1+81d1d71" ifid="A4B57A38-4020-453D-90AD-DB8E4655C6C0" zoom="1" format="SugarCube" format-version="2.37.3" options="debug" hidden><style role="stylesheet" id="twine-user-stylesheet" type="text/twine-css"></style><script role="script" id="twine-user-script" type="text/twine-javascript">/* twine-user-script #1: "bundle.js" */
+(()=>{var e={649:()=>{Config.saves.maxAutoSaves=1;var e=!1;$(document).on(":passagerender",(function(){e&&Save.browser.auto.save("Autosave")})),$(document).on(":storyready",(function(){console.log("ready"),Save.browser.auto.size>0&&Save.browser.continue(),e=!0}))},470:()=>{function e(){var e={isDoorLocked:!0,time:0};for(var r in e)State.variables[r]=e[r]}Macro.add("soft-reset",{handler:function(){!function(){var r=function(){var e={};for(var r in State.variables)r.startsWith("persist")&&(e[r]=State.variables[r]);return e}();for(var a in State.variables)delete State.variables[a];for(var a in r)State.variables[a]=r[a];e(),Engine.play("Entryway")}()}}),Macro.add("init-vars",{handler:function(){e()}})}},r={};function a(t){var o=r[t];if(void 0!==o)return o.exports;var n=r[t]={exports:{}};return e[t](n,n.exports,a),n.exports}a.n=e=>{var r=e&&e.__esModule?()=>e.default:()=>e;return a.d(r,{a:r}),r},a.d=(e,r)=>{for(var t in r)a.o(r,t)&&!a.o(e,t)&&Object.defineProperty(e,t,{enumerable:!0,get:r[t]})},a.o=(e,r)=>Object.prototype.hasOwnProperty.call(e,r),(()=>{"use strict";a(649),a(470),console.log("!!!")})()})();
+/* twine-user-script #2: "story.js" */
+// Config.saves.maxAutoSaves = 1;
 
-let hasLoaded = false;
+// let hasLoaded = false;
 
-// Auto-save after each passage
-$(document).on(':passagerender', function () {
-    if (!hasLoaded) return;
-	Save.browser.auto.save("Autosave");
-    // console.log("save");
-});
+// // Auto-save after each passage
+// $(document).on(':passagerender', function () {
+//     if (!hasLoaded) return;
+// 	Save.browser.auto.save("Autosave");
+//     // console.log("save");
+// });
 
-// Auto-load the autosave if it exists
-$(document).on(':storyready', function () {
-    console.log("ready");
-	if (Save.browser.auto.size > 0) {
-        // console.log("continue");
-		Save.browser.continue();
-	}
-    hasLoaded = true;
-});
+// // Auto-load the autosave if it exists
+// $(document).on(':storyready', function () {
+//     console.log("ready");
+// 	if (Save.browser.auto.size > 0) {
+//         // console.log("continue");
+// 		Save.browser.continue();
+// 	}
+//     hasLoaded = true;
+// });
 
-function gameInit() {
-	State.variables.isDoorLocked = true;
-    State.variables.time = 0;
-}
-
-
-function getPreservedVars() {
-	const out = {};
-	for (const key in State.variables) {
-		if (key.startsWith("persist")) {
-			out[key] = State.variables[key];
-		}
-	}
-	return out;
-}
+// function gameInit() {
+// 	State.variables.isDoorLocked = true;
+//     State.variables.time = 0;
+// }
 
 
-function softReset() {
-	// Cache preserved values
-	const preserved = getPreservedVars();
+// function getPreservedVars() {
+// 	const out = {};
+// 	for (const key in State.variables) {
+// 		if (key.startsWith("persist")) {
+// 			out[key] = State.variables[key];
+// 		}
+// 	}
+// 	return out;
+// }
 
-	// Replace entire variable store
-	for (const key in State.variables) {
-		delete State.variables[key]
-	}
 
-	// Restore preserved values
-	for (const key in preserved) {
-		State.variables[key] = preserved[key];
-	}
+// function softReset() {
+// 	// Cache preserved values
+// 	const preserved = getPreservedVars();
 
-	// Re-run init
-	gameInit();
+// 	// Replace entire variable store
+// 	for (const key in State.variables) {
+// 		delete State.variables[key]
+// 	}
 
-	// Optionally go to a specific passage
-	Engine.play("Entryway");
-}
+// 	// Restore preserved values
+// 	for (const key in preserved) {
+// 		State.variables[key] = preserved[key];
+// 	}
 
-Macro.add("soft-reset", {
-	handler() {
-		softReset();
-	}
-});
+// 	// Re-run init
+// 	gameInit();
 
-Macro.add("init-vars", {
-    handler() {
-        gameInit();
-    }
-});
+// 	// Optionally go to a specific passage
+// 	Engine.play("Entryway");
+// }
+
+// Macro.add("soft-reset", {
+// 	handler() {
+// 		softReset();
+// 	}
+// });
+
+// Macro.add("init-vars", {
+//     handler() {
+//         gameInit();
+//     }
+// });
 </script><tw-passagedata pid="1" name="StoryInit" tags="" position="575,325" size="100,100">&lt;&lt;init-vars&gt;&gt;</tw-passagedata><tw-passagedata pid="2" name="PassageFooter" tags="" position="225,100" size="100,100">&lt;div class=&quot;footer-links&quot;&gt;
   &lt;&lt;link &quot;Transmit Memories&quot;&gt;&gt;&lt;&lt;soft-reset&gt;&gt;&lt;&lt;/link&gt;&gt;
 &lt;/div&gt;</tw-passagedata><tw-passagedata pid="3" name="TimeReset" tags="" position="350,100" size="100,100">&lt;&lt;goto &quot;Entryway&quot;&gt;&gt;</tw-passagedata><tw-passagedata pid="4" name="Entryway" tags="" position="800,325" size="100,100">In this room, you see a single door, leading north, with a console next to it. The console has various controls, including a prominent lever, but everything is in disrepair.

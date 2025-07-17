@@ -11,7 +11,8 @@
     "liveServer.settings.ignoreFiles": [
         "**/*.tw",
         "**/*.twee",
-        "**/*.js"
+        "**/*.js",
+        "**/*.ts"
     ],
     "cSpell.words": [
         "ifid"

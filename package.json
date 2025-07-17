@@ -1,0 +1,22 @@
+{
+  "name": "coherence",
+  "version": "1.0.0",
+  "description": "",
+  "main": "ts/index.ts",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "thomaswp",
+  "license": "ISC",
+  "dependencies": {
+    "@types/jquery": "^3.5.32",
+    "@types/twine-sugarcube": "^2.37.2",
+    "webpack-shell-plugin-next": "^2.3.2"
+  },
+  "devDependencies": {
+    "install": "^0.13.0",
+    "npm": "^11.4.2",
+    "ts-loader": "^9.5.2",
+    "typescript": "^5.8.3"
+  }
+}

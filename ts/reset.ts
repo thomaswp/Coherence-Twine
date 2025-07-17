@@ -1,9 +1,24 @@
 
 function gameInit() {
-    const initMap = {
+	const defaultMap = {
+		"time": 0,
+	}
+    const avoidInfoMap = {
         "isDoorLocked": true,
-        "time": 0,
     };
+	const booleanMap = {
+	}
+
+	const levelMap = {
+		"Boolean": booleanMap,
+		"AvoidInfo": avoidInfoMap,
+	}
+	const levelVars = levelMap[State.variables["persistLevel"]] || {};
+
+	const initMap = {
+		...defaultMap,
+		...levelVars,
+	};
 	for (const key in initMap) {
         State.variables[key] = initMap[key];
     }

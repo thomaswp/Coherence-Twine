@@ -1,0 +1,24 @@
+
+:: Boolean:Start
+
+Your notes so far indicate that you need to find Research Lab A, and your explorations have brought you to a room, with a door the North, East and West and a desk with a console in the center.
+
+
+* <<door "Go North" "Boolean:RoomA" "isRoomALocked" true >>
+
+<span id="outcome"></span>
+
+:: Boolean:RoomA
+Room A
+
+
+<<return >>
+
+:: Boolean:GoalRoom
+
+:: Boolean:Lever1
+
+:: Boolean:Lever2
+
+<<macro>>
+<</macro>>

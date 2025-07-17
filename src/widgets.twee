@@ -1,0 +1,22 @@
+:: Widgets [widget]
+
+/* text, roomName, variable, defaultValue */
+<<widget door>> \
+    <<link _args[0]>>
+        <<if State.variables[_args[2]] === undefined >>
+            <<set State.variables[_args[2]] = _args[3]>>
+            Setting _args[2] to _args[3]
+        <</if>>
+        <<if State.variables[_args[2]]>>
+            <<replace "#outcome">>
+                <<if _args[4] === undefined>>
+                    The door is locked
+                <<else>>
+                    _args[4]
+                <</if>>
+            <</replace>>
+        <<else>>
+            <<goto _args[1]>>
+        <</if>>
+    <</link>>
+<</widget>>

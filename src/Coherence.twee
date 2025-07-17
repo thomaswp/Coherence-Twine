@@ -7,12 +7,14 @@ Coherence
   "ifid": "A4B57A38-4020-453D-90AD-DB8E4655C6C0",
   "format": "SugarCube",
   "format-version": "2.37.3",
-  "start": "Entryway",
+  "start": "Boolean:Start",
   "zoom": 1
 }
 
 :: StoryInit {"position":"575,325","size":"100,100"}
-<<set $persistResetRoom = "Entryway" >>
+/* <<set Config.passages.nobr = true>> */
+<<set $persistLevel = "Boolean">>
+<<set $persistResetRoom = $persistLevel + ":Start" >>
 <<init-vars>>
 
 :: PassageFooter

@@ -11,108 +11,11 @@ Coherence
   "zoom": 1
 }
 
-
 :: StoryInit {"position":"575,325","size":"100,100"}
+<<set $persistResetRoom = "Entryway" >>
 <<init-vars>>
 
 :: PassageFooter
 <div class="footer-links">
   <<link "Transmit Memories">><<soft-reset>><</link>>
 </div>
-
-:: TimeReset
-
-<<goto "Entryway">>
-
-
-:: Entryway {"position":"800,325","size":"100,100"}
-In this room, you see a single door, leading north, with a console next to it. The console has various controls, including a prominent lever, but everything is in disrepair.
-
-* [[Go through the door|Hallway]]
-* [[Inspect the console|Entryway Console]]
-* <<link "Pull the lever">>
-    <<if $time >= 380>>
-        <<set $isDoorLocked = false>>
-    <<else>>
-    <<set $seenLeverJammed = true >>
-    <<replace "#outcome">>
-        The lever has jammed and cannot be pulled.
-    <</replace>>
-    <</if>>
-<</link>>
-
-<span id="outcome"></span>
-
-
-:: Entryway Console {"position":"800,450","size":"100,100"}
-The console has a note affixed that reads:
-
-> ''[T-380] Edward'': Lisa, this is a bit embarrassing, but I think I was a bit overzealous with the isolation door lever here. I'll fix it soon (yes, I know, a word with strange meaning around here), but I have to finish this sim first. If you need to get in before then, you might want to jump back here <<link "⌇⎅⍾⍙☊⎅⌇">>
-<<set $persistHasTime380 = true>>
-<<replace #outcome>>
-    You copy down the code.
-<</replace>>
-<</link>>.
-
-<span id="outcome"></span>
-
-<<return>>
-
-
-:: Hallway {"position":"925,450","size":"100,100"}
-You enter a hallway of sorts. There is a door leading North and another leading East. Neither are have any label indicating where they lead.
-The south door returns to the Entryway.
-
-* <<link "Open the North door">>
-<<if $isDoorLocked>>
-    <<set $seenDoorLocked = true >>
-    <<replace "#outcome">>
-        The door is locked.
-    <</replace>>
-<<else>>
-    <<goto "Goal Chamber">>
-<</if>>
-<</link>>
-* [[Open the East door|Travel Room]]
-* [[Return to the Entryway|Entryway]]
-
-
-<span id="outcome"></span>
-
-
-:: Travel Room {"position":"925,575","size":"100,100"}
-
-You enter a circular chamber with what could almost be an elevator in the middle. The chamber is open. To the East there is another door.
-
-* [[Enter the chamber|Travel Chamber]]
-* [[Go West to the Hallway|Hallway]]
-* [[Go through the East door|Lab]]
-
-:: Travel Chamber
-There is little in the circular chamber besides a pair of encompassing doors that are wide open at the moment, and a minimal user interface, consisting of small display and a button.
-
-<<if $persistHasTime380>>
-    As you enter, the display lights up with the code ⌇⎅⍾⍙☊⎅⌇ you noticed earlier in the note from Edward.
-<<if $seenLeverJammed || $seenDoorLocked>>
-    However, the button is dull and unyielding to the touch.
-<<else>>
-    The button pulses slowly with a warm red glow.
-
-    <<linkappend "Press the button">>
-        <<set $time = 380>>
-        With a hiss, the doors snap smoothly shut. You sense a low hum of energy, which culminates in snap. The doors slide open to reveal the same room you originally entered.
-    <</linkappend>>
-<</if>>
-<<else>>
-    The display seems to accept some sort of code, but the language and meaning are beyond you. The button is dull and unyielding to the touch.
-<</if>>
-
-<<return>>
-
-:: Lab
-
-/* Reveal a conversation revealing the need for consistency */
-
-:: Goal Chamber
-Success!!
-

@@ -38,7 +38,7 @@ function softReset() {
 	gameInit();
 
 	// Optionally go to a specific passage
-	Engine.play("Entryway");
+	Engine.play(State.variables["persistResetRoom"]);
 }
 
 Macro.add("soft-reset", {

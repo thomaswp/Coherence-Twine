@@ -19,6 +19,8 @@ module.exports = {
     filename: 'bundle.js',
     path: path.resolve(__dirname, 'src'),
   },
+  mode: 'development',
+  devtool: 'inline-source-map',
   plugins: [
     new WebpackShellPluginNext({
       onDoneWatch: {

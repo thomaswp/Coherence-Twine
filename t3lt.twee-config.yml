@@ -4,3 +4,7 @@ sugarcube-2:
       name: init-vars
     soft-reset:
       name: soft-reset
+    door:
+      name: door
+    boolean-update-doors:
+      name: boolean-update-doors

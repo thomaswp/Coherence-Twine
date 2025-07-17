@@ -22,7 +22,7 @@ In this room, you see a single door, leading north, with a console next to it. T
 :: Entryway Console {"position":"800,450","size":"100,100"}
 The console has a note affixed that reads:
 
-> ''[T-380] Edward'': Lisa, this is a bit embarrassing, but I think I was a bit overzealous with the isolation door lever here. I'll fix it soon (yes, I know, a word with strange meaning around here), but I have to finish this sim first. If you need to get in before then, you might want to jump back here <<link "⌇⎅⍾⍙☊⎅⌇">>
+> ''[T-380] Edwin'': Liza, this is a bit embarrassing, but I think I was a bit overzealous with the isolation door lever here. I'll fix it soon (yes, I know, a word with strange meaning around here), but I have to finish this sim first. If you need to get in before then, you might want to jump back here <<link "⌇⎅⍾⍙☊⎅⌇">>
 <<set $persistHasTime380 = true>>
 <<replace #outcome>>
     You copy down the code.

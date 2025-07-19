@@ -73,6 +73,16 @@ export class PartialState {
         return null;
     }
 
+    getConcreteValue(variable: Variable): boolean | null {
+        if (this.observedValues.has(variable)) {
+            return this.observedValues.get(variable);
+        }
+        // This could be more efficient, but that's not really
+        // an issue and I like the consistency of not duplicating
+        // the calculation.
+        return this.toConcreteState().get(variable);
+    }
+
     toConcreteState(): ConcreteState | null {
         // Start with observations
         const state = copyMap(this.observedValues);
@@ -144,18 +154,23 @@ export class World {
         if (observation.any()) {
             result = observation.get(this.time);
         } else {
-            
+            const currentState = this.getPartialState();
+            const state = currentState.findConsistentState();
+            if (!state) {
+                // I think this is too severe. The future shouldn't be
+                // able to create a contradiction quite yet right?
+                throw Error("Unresolvable contradiction!");
+            }
+            result = state.getConcreteValue(variable);
+            for (const [variable, value] of state.observedValues) {
+                if (!currentState.observedValues.has(variable)) {
+                    // Add any new observations from the resolution
+                    this.observations.get(variable).set(value, this.time);
+                }
+            }
         }
-        // Not automatic for now...
-        // this.observations.set(result, time);
+        observation.set(result, this.time);
         return result;
-    }
-
-    resolve(variable: Variable) {
-        if (this.observations.get(variable).any()) {
-            throw Error("Cannot resolve observed variable.")
-        }
-        const state = this.copy();
     }
 
     /**
@@ -164,14 +179,19 @@ export class World {
      * current and future state you're traveling to, including
      * inconsistencies in the current time.
      */
-    isConsistentWithFuture(futureTime: number) {
-
+    canTravelTo(time: number): boolean {
+        // TODO!
+        return false;
     }
 
-    hasContradiction() {
-
+    travelTo(newTime: number): boolean {
+        if (!this.canTravelTo(newTime)) return false;
+        this.time = newTime;
+        // TODO: merge states!
+        return true;
     }
 
+    // TODO: Probably don't need anymore
     copy() {
         const observations = new Map<Variable, Observations>();
         for (let [vara, obs] of this.observations.entries()) {
@@ -193,6 +213,10 @@ class Observations {
 
     any() {
         return this.values.size > 0;
+    }
+
+    hasExact(time): boolean {
+        return this.values.has(time);
     }
 
     get(time): boolean | undefined {

@@ -51,7 +51,7 @@ describe('PartialState', () => {
         expect(state.isDefaultContradictory()).toBeTruthy();
         const consistent = state.findConsistentState();
         expect(consistent).toBeTruthy();
-        console.log(consistent.inspect());
+        // console.log(consistent.inspect());
         expect(consistent.observedValues.get(lever2)).toBe(false);
     })
 })

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { System, MutableVariable, DerivedVariable } from '../ts/state'
+import { System, MutableVariable, DerivedVariable, PartialState, Variable } from '../ts/state'
 
 type BooleanSystem = {
     lever1: MutableVariable;
@@ -33,6 +33,28 @@ function createTestSystem(): BooleanSystem {
     }
 }
 
+describe('PartialState', () => {
+    it('finds consistency', () => {
+        const {
+            lever1, lever2,
+            doorB, doorC,
+            system
+        } = createTestSystem();
+        const state = new PartialState(
+            [lever1, lever2], 
+            [doorB, doorC], 
+            new Map<Variable, boolean>([
+                [lever1, true],
+                [doorC, false]
+            ]));
+        expect(false);
+        expect(state.isDefaultContradictory()).toBeTruthy();
+        const consistent = state.findConsistentState();
+        expect(consistent).toBeTruthy();
+        console.log(consistent.inspect());
+        expect(consistent.observedValues.get(lever2)).toBe(false);
+    })
+})
 
 describe('system', () => {
     it('has a solution', () => {

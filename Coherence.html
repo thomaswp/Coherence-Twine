@@ -104,15 +104,7 @@ var LZString=function(){var r=String.fromCharCode,o="ABCDEFGHIJKLMNOPQRSTUVWXYZa
 		<div id="init-lacking"><p>Browser lacks capabilities required to play.</p><p>Upgrade or switch to another browser.</p></div>
 		<div id="init-loading"><div>Loading&hellip;</div></div>
 	</div>
-	<!-- UUID://A4B57A38-4020-453D-90AD-DB8E4655C6C0// --><tw-storydata name="Coherence" startnode="10" creator="Tweego" creator-version="2.1.1+81d1d71" ifid="A4B57A38-4020-453D-90AD-DB8E4655C6C0" zoom="1" format="SugarCube" format-version="2.37.3" options="debug" hidden><style role="stylesheet" id="twine-user-stylesheet" type="text/twine-css"></style><script role="script" id="twine-user-script" type="text/twine-javascript">/*
- * ATTENTION: The "eval" devtool has been used (maybe by default in mode: "development").
- * This devtool is neither made for production nor for readable output files.
- * It uses "eval()" calls to create a separate source file in the browser devtools.
- * If you are trying to read the output file, select a different devtool (https://webpack.js.org/configuration/devtool/)
- * or disable the default devtool with "devtool: false".
- * If you are looking for production-ready output files, see mode: "production" (https://webpack.js.org/configuration/mode/).
- */
-/******/ (() => { // webpackBootstrap
+	<!-- UUID://A4B57A38-4020-453D-90AD-DB8E4655C6C0// --><tw-storydata name="Coherence" startnode="10" creator="Tweego" creator-version="2.1.1+81d1d71" ifid="A4B57A38-4020-453D-90AD-DB8E4655C6C0" zoom="1" format="SugarCube" format-version="2.37.3" options="debug" hidden><style role="stylesheet" id="twine-user-stylesheet" type="text/twine-css"></style><script role="script" id="twine-user-script" type="text/twine-javascript">/******/ (() => { // webpackBootstrap
 /******/ 	var __webpack_modules__ = ({
 
 /***/ "./ts/autosave.ts":
@@ -121,18 +113,25 @@ var LZString=function(){var r=String.fromCharCode,o="ABCDEFGHIJKLMNOPQRSTUVWXYZa
   \************************/
 /***/ (() => {
 
-eval("Config.saves.maxAutoSaves = 1;\nvar hasLoaded = false;\n// Auto-save after each passage\n$(document).on(':passagerender', function () {\n    if (!hasLoaded)\n        return;\n    Save.browser.auto.save(\"Autosave\");\n    // console.log(\"save\");\n});\n// Auto-load the autosave if it exists\n$(document).on(':storyready', function () {\n    console.log(\"ready\");\n    if (Save.browser.auto.size > 0) {\n        // console.log(\"continue\");\n        Save.browser.continue();\n    }\n    hasLoaded = true;\n});\n\n\n//# sourceURL=webpack://coherence/./ts/autosave.ts?");
+Config.saves.maxAutoSaves = 1;
+let hasLoaded = false;
+// Auto-save after each passage
+$(document).on(':passagerender', function () {
+    if (!hasLoaded)
+        return;
+    Save.browser.auto.save("Autosave");
+    // console.log("save");
+});
+// Auto-load the autosave if it exists
+$(document).on(':storyready', function () {
+    console.log("ready");
+    if (Save.browser.auto.size > 0) {
+        // console.log("continue");
+        Save.browser.continue();
+    }
+    hasLoaded = true;
+});
 
-/***/ }),
-
-/***/ "./ts/index.ts":
-/*!*********************!*\
-  !*** ./ts/index.ts ***!
-  \*********************/
-/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
-
-"use strict";
-eval("__webpack_require__.r(__webpack_exports__);\n/* harmony import */ var _autosave__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./autosave */ \"./ts/autosave.ts\");\n/* harmony import */ var _autosave__WEBPACK_IMPORTED_MODULE_0___default = /*#__PURE__*/__webpack_require__.n(_autosave__WEBPACK_IMPORTED_MODULE_0__);\n/* harmony import */ var _reset__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./reset */ \"./ts/reset.ts\");\n/* harmony import */ var _reset__WEBPACK_IMPORTED_MODULE_1___default = /*#__PURE__*/__webpack_require__.n(_reset__WEBPACK_IMPORTED_MODULE_1__);\n\n\nconsole.log(\"!!!\");\n\n\n//# sourceURL=webpack://coherence/./ts/index.ts?");
 
 /***/ }),
 
@@ -140,9 +139,62 @@ eval("__webpack_require__.r(__webpack_exports__);\n/* harmony import */ var _aut
 /*!*********************!*\
   !*** ./ts/reset.ts ***!
   \*********************/
-/***/ (function() {
+/***/ (() => {
 
-eval("var __assign = (this && this.__assign) || function () {\n    __assign = Object.assign || function(t) {\n        for (var s, i = 1, n = arguments.length; i < n; i++) {\n            s = arguments[i];\n            for (var p in s) if (Object.prototype.hasOwnProperty.call(s, p))\n                t[p] = s[p];\n        }\n        return t;\n    };\n    return __assign.apply(this, arguments);\n};\nfunction gameInit() {\n    var defaultMap = {\n        \"time\": 0,\n    };\n    var avoidInfoMap = {\n        \"isDoorLocked\": true,\n    };\n    var booleanMap = {\n        \"isLever1Locked\": false,\n    };\n    var levelMap = {\n        \"Boolean\": booleanMap,\n        \"AvoidInfo\": avoidInfoMap,\n    };\n    var levelVars = levelMap[State.variables[\"persistLevel\"]] || {};\n    var initMap = __assign(__assign({}, defaultMap), levelVars);\n    for (var key in initMap) {\n        State.variables[key] = initMap[key];\n    }\n}\nfunction getPreservedVars() {\n    var out = {};\n    for (var key in State.variables) {\n        if (key.startsWith(\"persist\")) {\n            out[key] = State.variables[key];\n        }\n    }\n    return out;\n}\nfunction softReset() {\n    // Cache preserved values\n    var preserved = getPreservedVars();\n    // Replace entire variable store\n    for (var key in State.variables) {\n        delete State.variables[key];\n    }\n    // Restore preserved values\n    for (var key in preserved) {\n        State.variables[key] = preserved[key];\n    }\n    // Re-run init\n    gameInit();\n    // Optionally go to a specific passage\n    Engine.play(State.variables[\"persistResetRoom\"]);\n}\nMacro.add(\"soft-reset\", {\n    handler: function () {\n        softReset();\n    }\n});\nMacro.add(\"init-vars\", {\n    handler: function () {\n        gameInit();\n    }\n});\n\n\n//# sourceURL=webpack://coherence/./ts/reset.ts?");
+function gameInit() {
+    const defaultMap = {
+        "time": 0,
+    };
+    const avoidInfoMap = {
+        "isDoorLocked": true,
+    };
+    const booleanMap = {};
+    const levelMap = {
+        "Boolean": booleanMap,
+        "AvoidInfo": avoidInfoMap,
+    };
+    const levelVars = levelMap[State.variables["persistLevel"]] || {};
+    const initMap = Object.assign(Object.assign({}, defaultMap), levelVars);
+    for (const key in initMap) {
+        State.variables[key] = initMap[key];
+    }
+}
+function getPreservedVars() {
+    const out = {};
+    for (const key in State.variables) {
+        if (key.startsWith("persist")) {
+            out[key] = State.variables[key];
+        }
+    }
+    return out;
+}
+function softReset() {
+    // Cache preserved values
+    const preserved = getPreservedVars();
+    // Replace entire variable store
+    for (const key in State.variables) {
+        delete State.variables[key];
+    }
+    // Restore preserved values
+    for (const key in preserved) {
+        State.variables[key] = preserved[key];
+    }
+    // Re-run init
+    gameInit();
+    // Optionally go to a specific passage
+    Engine.play(State.variables["persistResetRoom"]);
+}
+Macro.add("soft-reset", {
+    handler() {
+        softReset();
+    }
+});
+Macro.add("init-vars", {
+    handler() {
+        gameInit();
+    }
+});
+
 
 /***/ })
 
@@ -166,7 +218,7 @@ eval("var __assign = (this && this.__assign) || function () {\n    __assign = Ob
 /******/ 		};
 /******/ 	
 /******/ 		// Execute the module function
-/******/ 		__webpack_modules__[moduleId].call(module.exports, module, module.exports, __webpack_require__);
+/******/ 		__webpack_modules__[moduleId](module, module.exports, __webpack_require__);
 /******/ 	
 /******/ 		// Return the exports of the module
 /******/ 		return module.exports;
@@ -214,14 +266,27 @@ eval("var __assign = (this && this.__assign) || function () {\n    __assign = Ob
 /******/ 	})();
 /******/ 	
 /************************************************************************/
-/******/ 	
-/******/ 	// startup
-/******/ 	// Load entry module and return exports
-/******/ 	// This entry module can't be inlined because the eval devtool is used.
-/******/ 	var __webpack_exports__ = __webpack_require__("./ts/index.ts");
-/******/ 	
+var __webpack_exports__ = {};
+// This entry need to be wrapped in an IIFE because it need to be in strict mode.
+(() => {
+"use strict";
+/*!*********************!*\
+  !*** ./ts/index.ts ***!
+  \*********************/
+__webpack_require__.r(__webpack_exports__);
+/* harmony import */ var _autosave__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./autosave */ "./ts/autosave.ts");
+/* harmony import */ var _autosave__WEBPACK_IMPORTED_MODULE_0___default = /*#__PURE__*/__webpack_require__.n(_autosave__WEBPACK_IMPORTED_MODULE_0__);
+/* harmony import */ var _reset__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./reset */ "./ts/reset.ts");
+/* harmony import */ var _reset__WEBPACK_IMPORTED_MODULE_1___default = /*#__PURE__*/__webpack_require__.n(_reset__WEBPACK_IMPORTED_MODULE_1__);
+
+
+console.log("!!!");
+
+})();
+
 /******/ })()
-;</script><tw-passagedata pid="1" name="StoryInit" tags="" position="575,325" size="100,100">/* &lt;&lt;set Config.passages.nobr = true&gt;&gt; */
+;
+//# sourceMappingURL=data:application/json;charset=utf-8;base64,eyJ2ZXJzaW9uIjozLCJmaWxlIjoiYnVuZGxlLmpzIiwibWFwcGluZ3MiOiI7Ozs7Ozs7OztBQUFBO0FBQ0E7QUFDQTtBQUNBO0FBQ0E7QUFDQTtBQUNBO0FBQ0E7QUFDQSxDQUFDO0FBQ0Q7QUFDQTtBQUNBO0FBQ0E7QUFDQTtBQUNBO0FBQ0E7QUFDQTtBQUNBLENBQUM7Ozs7Ozs7Ozs7O0FDakJEO0FBQ0E7QUFDQTtBQUNBO0FBQ0E7QUFDQTtBQUNBO0FBQ0E7QUFDQTtBQUNBO0FBQ0E7QUFDQTtBQUNBO0FBQ0Esa0RBQWtEO0FBQ2xEO0FBQ0E7QUFDQTtBQUNBO0FBQ0E7QUFDQTtBQUNBO0FBQ0E7QUFDQTtBQUNBO0FBQ0E7QUFDQTtBQUNBO0FBQ0E7QUFDQTtBQUNBO0FBQ0E7QUFDQTtBQUNBO0FBQ0E7QUFDQTtBQUNBO0FBQ0E7QUFDQTtBQUNBO0FBQ0E7QUFDQTtBQUNBO0FBQ0E7QUFDQTtBQUNBO0FBQ0E7QUFDQTtBQUNBLENBQUM7QUFDRDtBQUNBO0FBQ0E7QUFDQTtBQUNBLENBQUM7Ozs7Ozs7VUNwREQ7VUFDQTs7VUFFQTtVQUNBO1VBQ0E7VUFDQTtVQUNBO1VBQ0E7VUFDQTtVQUNBO1VBQ0E7VUFDQTtVQUNBO1VBQ0E7VUFDQTs7VUFFQTtVQUNBOztVQUVBO1VBQ0E7VUFDQTs7Ozs7V0N0QkE7V0FDQTtXQUNBO1dBQ0E7V0FDQTtXQUNBLGlDQUFpQyxXQUFXO1dBQzVDO1dBQ0E7Ozs7O1dDUEE7V0FDQTtXQUNBO1dBQ0E7V0FDQSx5Q0FBeUMsd0NBQXdDO1dBQ2pGO1dBQ0E7V0FDQTs7Ozs7V0NQQTs7Ozs7V0NBQTtXQUNBO1dBQ0E7V0FDQSx1REFBdUQsaUJBQWlCO1dBQ3hFO1dBQ0EsZ0RBQWdELGFBQWE7V0FDN0Q7Ozs7Ozs7Ozs7Ozs7Ozs7QUNOb0I7QUFDSDtBQUNqQiIsInNvdXJjZXMiOlsid2VicGFjazovL2NvaGVyZW5jZS8uL3RzL2F1dG9zYXZlLnRzIiwid2VicGFjazovL2NvaGVyZW5jZS8uL3RzL3Jlc2V0LnRzIiwid2VicGFjazovL2NvaGVyZW5jZS93ZWJwYWNrL2Jvb3RzdHJhcCIsIndlYnBhY2s6Ly9jb2hlcmVuY2Uvd2VicGFjay9ydW50aW1lL2NvbXBhdCBnZXQgZGVmYXVsdCBleHBvcnQiLCJ3ZWJwYWNrOi8vY29oZXJlbmNlL3dlYnBhY2svcnVudGltZS9kZWZpbmUgcHJvcGVydHkgZ2V0dGVycyIsIndlYnBhY2s6Ly9jb2hlcmVuY2Uvd2VicGFjay9ydW50aW1lL2hhc093blByb3BlcnR5IHNob3J0aGFuZCIsIndlYnBhY2s6Ly9jb2hlcmVuY2Uvd2VicGFjay9ydW50aW1lL21ha2UgbmFtZXNwYWNlIG9iamVjdCIsIndlYnBhY2s6Ly9jb2hlcmVuY2UvLi90cy9pbmRleC50cyJdLCJzb3VyY2VzQ29udGVudCI6WyJDb25maWcuc2F2ZXMubWF4QXV0b1NhdmVzID0gMTtcbmxldCBoYXNMb2FkZWQgPSBmYWxzZTtcbi8vIEF1dG8tc2F2ZSBhZnRlciBlYWNoIHBhc3NhZ2VcbiQoZG9jdW1lbnQpLm9uKCc6cGFzc2FnZXJlbmRlcicsIGZ1bmN0aW9uICgpIHtcbiAgICBpZiAoIWhhc0xvYWRlZClcbiAgICAgICAgcmV0dXJuO1xuICAgIFNhdmUuYnJvd3Nlci5hdXRvLnNhdmUoXCJBdXRvc2F2ZVwiKTtcbiAgICAvLyBjb25zb2xlLmxvZyhcInNhdmVcIik7XG59KTtcbi8vIEF1dG8tbG9hZCB0aGUgYXV0b3NhdmUgaWYgaXQgZXhpc3RzXG4kKGRvY3VtZW50KS5vbignOnN0b3J5cmVhZHknLCBmdW5jdGlvbiAoKSB7XG4gICAgY29uc29sZS5sb2coXCJyZWFkeVwiKTtcbiAgICBpZiAoU2F2ZS5icm93c2VyLmF1dG8uc2l6ZSA+IDApIHtcbiAgICAgICAgLy8gY29uc29sZS5sb2coXCJjb250aW51ZVwiKTtcbiAgICAgICAgU2F2ZS5icm93c2VyLmNvbnRpbnVlKCk7XG4gICAgfVxuICAgIGhhc0xvYWRlZCA9IHRydWU7XG59KTtcbiIsImZ1bmN0aW9uIGdhbWVJbml0KCkge1xuICAgIGNvbnN0IGRlZmF1bHRNYXAgPSB7XG4gICAgICAgIFwidGltZVwiOiAwLFxuICAgIH07XG4gICAgY29uc3QgYXZvaWRJbmZvTWFwID0ge1xuICAgICAgICBcImlzRG9vckxvY2tlZFwiOiB0cnVlLFxuICAgIH07XG4gICAgY29uc3QgYm9vbGVhbk1hcCA9IHt9O1xuICAgIGNvbnN0IGxldmVsTWFwID0ge1xuICAgICAgICBcIkJvb2xlYW5cIjogYm9vbGVhbk1hcCxcbiAgICAgICAgXCJBdm9pZEluZm9cIjogYXZvaWRJbmZvTWFwLFxuICAgIH07XG4gICAgY29uc3QgbGV2ZWxWYXJzID0gbGV2ZWxNYXBbU3RhdGUudmFyaWFibGVzW1wicGVyc2lzdExldmVsXCJdXSB8fCB7fTtcbiAgICBjb25zdCBpbml0TWFwID0gT2JqZWN0LmFzc2lnbihPYmplY3QuYXNzaWduKHt9LCBkZWZhdWx0TWFwKSwgbGV2ZWxWYXJzKTtcbiAgICBmb3IgKGNvbnN0IGtleSBpbiBpbml0TWFwKSB7XG4gICAgICAgIFN0YXRlLnZhcmlhYmxlc1trZXldID0gaW5pdE1hcFtrZXldO1xuICAgIH1cbn1cbmZ1bmN0aW9uIGdldFByZXNlcnZlZFZhcnMoKSB7XG4gICAgY29uc3Qgb3V0ID0ge307XG4gICAgZm9yIChjb25zdCBrZXkgaW4gU3RhdGUudmFyaWFibGVzKSB7XG4gICAgICAgIGlmIChrZXkuc3RhcnRzV2l0aChcInBlcnNpc3RcIikpIHtcbiAgICAgICAgICAgIG91dFtrZXldID0gU3RhdGUudmFyaWFibGVzW2tleV07XG4gICAgICAgIH1cbiAgICB9XG4gICAgcmV0dXJuIG91dDtcbn1cbmZ1bmN0aW9uIHNvZnRSZXNldCgpIHtcbiAgICAvLyBDYWNoZSBwcmVzZXJ2ZWQgdmFsdWVzXG4gICAgY29uc3QgcHJlc2VydmVkID0gZ2V0UHJlc2VydmVkVmFycygpO1xuICAgIC8vIFJlcGxhY2UgZW50aXJlIHZhcmlhYmxlIHN0b3JlXG4gICAgZm9yIChjb25zdCBrZXkgaW4gU3RhdGUudmFyaWFibGVzKSB7XG4gICAgICAgIGRlbGV0ZSBTdGF0ZS52YXJpYWJsZXNba2V5XTtcbiAgICB9XG4gICAgLy8gUmVzdG9yZSBwcmVzZXJ2ZWQgdmFsdWVzXG4gICAgZm9yIChjb25zdCBrZXkgaW4gcHJlc2VydmVkKSB7XG4gICAgICAgIFN0YXRlLnZhcmlhYmxlc1trZXldID0gcHJlc2VydmVkW2tleV07XG4gICAgfVxuICAgIC8vIFJlLXJ1biBpbml0XG4gICAgZ2FtZUluaXQoKTtcbiAgICAvLyBPcHRpb25hbGx5IGdvIHRvIGEgc3BlY2lmaWMgcGFzc2FnZVxuICAgIEVuZ2luZS5wbGF5KFN0YXRlLnZhcmlhYmxlc1tcInBlcnNpc3RSZXNldFJvb21cIl0pO1xufVxuTWFjcm8uYWRkKFwic29mdC1yZXNldFwiLCB7XG4gICAgaGFuZGxlcigpIHtcbiAgICAgICAgc29mdFJlc2V0KCk7XG4gICAgfVxufSk7XG5NYWNyby5hZGQoXCJpbml0LXZhcnNcIiwge1xuICAgIGhhbmRsZXIoKSB7XG4gICAgICAgIGdhbWVJbml0KCk7XG4gICAgfVxufSk7XG4iLCIvLyBUaGUgbW9kdWxlIGNhY2hlXG52YXIgX193ZWJwYWNrX21vZHVsZV9jYWNoZV9fID0ge307XG5cbi8vIFRoZSByZXF1aXJlIGZ1bmN0aW9uXG5mdW5jdGlvbiBfX3dlYnBhY2tfcmVxdWlyZV9fKG1vZHVsZUlkKSB7XG5cdC8vIENoZWNrIGlmIG1vZHVsZSBpcyBpbiBjYWNoZVxuXHR2YXIgY2FjaGVkTW9kdWxlID0gX193ZWJwYWNrX21vZHVsZV9jYWNoZV9fW21vZHVsZUlkXTtcblx0aWYgKGNhY2hlZE1vZHVsZSAhPT0gdW5kZWZpbmVkKSB7XG5cdFx0cmV0dXJuIGNhY2hlZE1vZHVsZS5leHBvcnRzO1xuXHR9XG5cdC8vIENyZWF0ZSBhIG5ldyBtb2R1bGUgKGFuZCBwdXQgaXQgaW50byB0aGUgY2FjaGUpXG5cdHZhciBtb2R1bGUgPSBfX3dlYnBhY2tfbW9kdWxlX2NhY2hlX19bbW9kdWxlSWRdID0ge1xuXHRcdC8vIG5vIG1vZHVsZS5pZCBuZWVkZWRcblx0XHQvLyBubyBtb2R1bGUubG9hZGVkIG5lZWRlZFxuXHRcdGV4cG9ydHM6IHt9XG5cdH07XG5cblx0Ly8gRXhlY3V0ZSB0aGUgbW9kdWxlIGZ1bmN0aW9uXG5cdF9fd2VicGFja19tb2R1bGVzX19bbW9kdWxlSWRdKG1vZHVsZSwgbW9kdWxlLmV4cG9ydHMsIF9fd2VicGFja19yZXF1aXJlX18pO1xuXG5cdC8vIFJldHVybiB0aGUgZXhwb3J0cyBvZiB0aGUgbW9kdWxlXG5cdHJldHVybiBtb2R1bGUuZXhwb3J0cztcbn1cblxuIiwiLy8gZ2V0RGVmYXVsdEV4cG9ydCBmdW5jdGlvbiBmb3IgY29tcGF0aWJpbGl0eSB3aXRoIG5vbi1oYXJtb255IG1vZHVsZXNcbl9fd2VicGFja19yZXF1aXJlX18ubiA9IChtb2R1bGUpID0+IHtcblx0dmFyIGdldHRlciA9IG1vZHVsZSAmJiBtb2R1bGUuX19lc01vZHVsZSA/XG5cdFx0KCkgPT4gKG1vZHVsZVsnZGVmYXVsdCddKSA6XG5cdFx0KCkgPT4gKG1vZHVsZSk7XG5cdF9fd2VicGFja19yZXF1aXJlX18uZChnZXR0ZXIsIHsgYTogZ2V0dGVyIH0pO1xuXHRyZXR1cm4gZ2V0dGVyO1xufTsiLCIvLyBkZWZpbmUgZ2V0dGVyIGZ1bmN0aW9ucyBmb3IgaGFybW9ueSBleHBvcnRzXG5fX3dlYnBhY2tfcmVxdWlyZV9fLmQgPSAoZXhwb3J0cywgZGVmaW5pdGlvbikgPT4ge1xuXHRmb3IodmFyIGtleSBpbiBkZWZpbml0aW9uKSB7XG5cdFx0aWYoX193ZWJwYWNrX3JlcXVpcmVfXy5vKGRlZmluaXRpb24sIGtleSkgJiYgIV9fd2VicGFja19yZXF1aXJlX18ubyhleHBvcnRzLCBrZXkpKSB7XG5cdFx0XHRPYmplY3QuZGVmaW5lUHJvcGVydHkoZXhwb3J0cywga2V5LCB7IGVudW1lcmFibGU6IHRydWUsIGdldDogZGVmaW5pdGlvbltrZXldIH0pO1xuXHRcdH1cblx0fVxufTsiLCJfX3dlYnBhY2tfcmVxdWlyZV9fLm8gPSAob2JqLCBwcm9wKSA9PiAoT2JqZWN0LnByb3RvdHlwZS5oYXNPd25Qcm9wZXJ0eS5jYWxsKG9iaiwgcHJvcCkpIiwiLy8gZGVmaW5lIF9fZXNNb2R1bGUgb24gZXhwb3J0c1xuX193ZWJwYWNrX3JlcXVpcmVfXy5yID0gKGV4cG9ydHMpID0+IHtcblx0aWYodHlwZW9mIFN5bWJvbCAhPT0gJ3VuZGVmaW5lZCcgJiYgU3ltYm9sLnRvU3RyaW5nVGFnKSB7XG5cdFx0T2JqZWN0LmRlZmluZVByb3BlcnR5KGV4cG9ydHMsIFN5bWJvbC50b1N0cmluZ1RhZywgeyB2YWx1ZTogJ01vZHVsZScgfSk7XG5cdH1cblx0T2JqZWN0LmRlZmluZVByb3BlcnR5KGV4cG9ydHMsICdfX2VzTW9kdWxlJywgeyB2YWx1ZTogdHJ1ZSB9KTtcbn07IiwiaW1wb3J0IFwiLi9hdXRvc2F2ZVwiO1xuaW1wb3J0IFwiLi9yZXNldFwiO1xuY29uc29sZS5sb2coXCIhISFcIik7XG4iXSwibmFtZXMiOltdLCJzb3VyY2VSb290IjoiIn0=</script><tw-passagedata pid="1" name="StoryInit" tags="" position="575,325" size="100,100">/* &lt;&lt;set Config.passages.nobr = true&gt;&gt; */
 &lt;&lt;set $persistLevel = &quot;Boolean&quot;&gt;&gt;
 &lt;&lt;set $persistResetRoom = $persistLevel + &quot;:Start&quot; &gt;&gt;
 &lt;&lt;init-vars&gt;&gt;</tw-passagedata><tw-passagedata pid="2" name="PassageFooter" tags="" position="225,100" size="100,100">&lt;div class=&quot;footer-links&quot;&gt;
@@ -291,53 +356,83 @@ The south door returns to the Entryway.
     The display seems to accept some sort of code, but the language and meaning are beyond you. The button is dull and unyielding to the touch.
 &lt;&lt;/if&gt;&gt;
 
-&lt;&lt;return&gt;&gt;</tw-passagedata><tw-passagedata pid="8" name="Lab" tags="" position="975,100" size="100,100">/* Reveal a conversation revealing the need for consistency */</tw-passagedata><tw-passagedata pid="9" name="Goal Chamber" tags="" position="1100,100" size="100,100">Success!!</tw-passagedata><tw-passagedata pid="10" name="Boolean:Start" tags="" position="1225,100" size="100,100">Your notes so far indicate that you need to find Research Lab B, and your explorations have brought you to a room, with a door the North, East and West and a desk with a console in the center.
-* &lt;&lt;link &quot;Go East&quot;&gt;&gt;
-    &lt;&lt;replace #outcome&gt;&gt;
-    As you get closer, you see that entry button on the East door is broken.
-    &lt;&lt;/replace&gt;&gt;
-  &lt;&lt;/link&gt;&gt;
+&lt;&lt;return&gt;&gt;</tw-passagedata><tw-passagedata pid="8" name="Lab" tags="" position="975,100" size="100,100">/* Reveal a conversation revealing the need for consistency */</tw-passagedata><tw-passagedata pid="9" name="Goal Chamber" tags="" position="1100,100" size="100,100">Success!!</tw-passagedata><tw-passagedata pid="10" name="Boolean:Start" tags="" position="1225,100" size="100,100">Your notes so far indicate that you need to find Research Lab B, and your explorations have brought you to a room, with a door the North, East and West, a travel chamber in the center, and a desk with a console in the center.
+/* * &lt;&lt;link &quot;Go East&quot;&gt;&gt;
+    &lt;&lt;if $time==0&gt;&gt;
+      &lt;&lt;goto &quot;Boolean:LabA&quot;&gt;&gt;
+    &lt;&lt;else&gt;&gt;
+      &lt;&lt;replace #outcome&gt;&gt;
+      As you get closer, you see that entry button on the East door is broken.
+      &lt;&lt;/replace&gt;&gt;
+    &lt;&lt;/if&gt;&gt;
+  &lt;&lt;/link&gt;&gt; */
+* [[Go East|Boolean:LabA]]
 * &lt;&lt;door &quot;Go North&quot; &quot;Boolean:LabB&quot; &quot;isLabBLocked&quot; true&gt;&gt;
-* [[Go West|Boolean:LabCHall]]
+* &lt;&lt;door &quot;Go West&quot; &quot;Boolean:LabC&quot; &quot;isLabCLocked&quot; false &gt;&gt;
 * [[Look at the Console|Boolean:Start:Console]]
+* [[Enter the Travel Chamber|Boolean:TravelChamber]]
 
 &lt;span id=&quot;outcome&quot;&gt;&lt;/span&gt;</tw-passagedata><tw-passagedata pid="11" name="Boolean:Start:Console" tags="" position="100,225" size="100,100">You a map of the laboratories, showing that:
-* Research Lab A is to the East
+* Research Labs A and D are to the East
 * Research Lab B is to the North
 * Research Lab C is to the West
 
 You also see an audio note that reads:
-&gt; &#39;&#39;[T-572] Liza&#39;&#39;: Ed, I think you&#39;re going to be dropping by the labs soon, and since you&#39;ve forgotten the last few times, just a reminder that the isolation lever in Lab A controls entry to //both// B and C. Be careful with that one -- easy to overexpose yourself.
+&gt; &#39;&#39;[T-572] Liza&#39;&#39;: Ed, I think you&#39;re going to be dropping by the labs soon, and since you&#39;ve forgotten the last few times, just a reminder that the isolation lever in Lab D controls entry to //both// B and C. Be careful with that one -- easy to overexpose yourself.
 
-&lt;&lt;return&gt;&gt;</tw-passagedata><tw-passagedata pid="12" name="Boolean:LabB" tags="" position="225,225" size="100,100">Congrats!
-&lt;&lt;return&gt;&gt;</tw-passagedata><tw-passagedata pid="13" name="Boolean:LabCHall" tags="" position="350,225" size="100,100">You enter into a hallway with a door on each side and a console along the wall with an odd looking lever beside it:
-* [[Go East|Boolean:Start]]
-* &lt;&lt;door &quot;Go West&quot; &quot;Boolean:LabC&quot; &quot;isLabCLocked&quot; false &gt;&gt;
-* [[Look at the Console|Boolean:LabCHall:Console]]
-* [[Inspect the lever|Boolean:LabCHall:Lever]]
-&lt;span id=&quot;outcome&quot;&gt;&lt;/span&gt;
+&lt;&lt;return&gt;&gt;</tw-passagedata><tw-passagedata pid="12" name="Boolean:TravelChamber" tags="" position="225,225" size="100,100">You enter the travel chamber.
+&lt;&lt;if $time==0&gt;&gt;
+  /* 
+  The weird thing about this condition is that it doesn&#39;t need to be 
+  true necessarily. You could update and observe things in the past, come
+  back to the present, and then reasonably safely travel back in time. The
+  way you&#39;re currently organizing it, you can pretty much only ever
+  travel back in time once if you do anything there, which isn&#39;t really
+  how it&#39;s intended. Not a big deal because you can always reset.
+  */
+  &lt;&lt;if $isLabBLocked === undefined &amp;&amp; $isLever1Locked === undefined&gt;&gt;
+* [[Travel back in time.|Boolean:Start][$time to -1]]
+  &lt;&lt;else&gt;&gt;
+    The button is a dull gray, clearly disabled.
+  &lt;&lt;/if&gt;&gt;
+&lt;&lt;else&gt;&gt;
+  &lt;&lt;link &quot;Travel forward in time.&quot;&gt;&gt;
+    &lt;&lt;goto &quot;Boolean:Start&quot;&gt;&gt;
+    &lt;&lt;set $time=0&gt;&gt;
+    &lt;&lt;if $isLever1Locked &amp;&amp; !$isLabCLocked&gt;&gt;
+      &lt;&lt;set $isLever2Locked = false&gt;&gt;
+      &lt;&lt;boolean-update-doors&gt;&gt;
+    &lt;&lt;/if&gt;&gt;
+  &lt;&lt;/link&gt;&gt;
+&lt;&lt;/if&gt;&gt;
+&lt;&lt;return&gt;&gt;</tw-passagedata><tw-passagedata pid="13" name="Boolean:LabA" tags="" position="350,225" size="100,100">You enter into a room with a door on the East and West side, but the Eastern door has clearly been damaged beyond use. There is a console along the wall with an odd looking lever beside it.
 
-&lt;&lt;return&gt;&gt;</tw-passagedata><tw-passagedata pid="14" name="Boolean:LabCHall:Console" tags="" position="475,225" size="100,100">The console has an audio note that reads:
-&gt; &#39;&#39;[T-523] Edwin&#39;&#39;: L, thanks for the tip about the lever. You&#39;re totally right, I almost locked myself out of traveling with that one. But I do need to get into Lab C, so I&#39;ve jury-rigged another isolation lever to get in. Hope I&#39;m not messing anyone up there.
+* [[Look at the Console|Boolean:LabA:Console]]
+* [[Inspect the lever|Boolean:LabA:Lever]]
+* [[Return West|Boolean:Start]]</tw-passagedata><tw-passagedata pid="14" name="Boolean:LabA:Console" tags="" position="475,225" size="100,100">The console has an audio note that reads:
+&gt; &#39;&#39;[T-523] Edwin&#39;&#39;: L, thanks for the tip about the lever. You&#39;re totally right, I almost locked myself out of traveling with that one. But I do need to get into Lab C, so I&#39;ve jury-rigged another isolation lever to get in. Hope I&#39;m not messing anyone up there. 
+/* Also, did you notice the Lab A door is on the fritz? I barely made it in here. I&#39;ll put in an order to have that repaired. */
 
-&lt;&lt;return&gt;&gt;</tw-passagedata><tw-passagedata pid="15" name="Boolean:LabCHall:Lever" tags="" position="600,225" size="100,100">The lever has exposed wiring and looks poorly constructed.
+&lt;&lt;return&gt;&gt;</tw-passagedata><tw-passagedata pid="15" name="Boolean:LabA:Lever" tags="" position="600,225" size="100,100">&lt;&lt;if $isLever1Locked===undefined&gt;&gt;
+  &lt;&lt;set $isLever1Locked = false&gt;&gt;
+&lt;&lt;/if&gt;&gt;
+
+The lever has exposed wiring and looks poorly constructed.
 * &lt;&lt;link &quot;Pull the lever&quot;&gt;&gt;
   &lt;&lt;set $isLever1Locked=!$isLever1Locked&gt;&gt;
   &lt;&lt;boolean-update-doors&gt;&gt;
-  &lt;&lt;goto &quot;Boolean:LabCHall:Lever&quot;&gt;&gt;
+  &lt;&lt;goto &quot;Boolean:LabA:Lever&quot;&gt;&gt;
 &lt;&lt;/link&gt;&gt; (currently set to &lt;&lt;if $isLever1Locked&gt;&gt;locked&lt;&lt;else&gt;&gt;unlocked&lt;&lt;/if&gt;&gt;)
 
-&lt;&lt;return&gt;&gt;</tw-passagedata><tw-passagedata pid="16" name="Boolean:Widgets" tags="widget" position="725,225" size="100,100">&lt;&lt;widget boolean-update-doors&gt;&gt;
-  /* Need to update once time travel and such */
-&lt;&lt;set $isLabCLocked=$isLever1Locked&gt;&gt;
-&lt;&lt;/widget&gt;&gt;</tw-passagedata><tw-passagedata pid="17" name="Boolean:LabC" tags="" position="850,225" size="100,100">There is a travel chamber in the lab.
-/* Disable if appropriate */
-&lt;&lt;if $time==0&gt;&gt;
-* [[Travel back in time.|Boolean:LabC][$time to -1]]
-&lt;&lt;else&gt;&gt;
-* [[Travel forward in time.|Boolean:LabC][$time to 0]]
-&lt;&lt;/if&gt;&gt;
-&lt;&lt;return&gt;&gt;</tw-passagedata><tw-passagedata pid="18" name="Widgets" tags="widget" position="975,225" size="100,100">/* text, roomName, variable, defaultValue */
+&lt;&lt;return&gt;&gt;</tw-passagedata><tw-passagedata pid="16" name="Boolean:LabB" tags="" position="725,225" size="100,100">Congrats!
+&lt;&lt;return&gt;&gt;</tw-passagedata><tw-passagedata pid="17" name="Boolean:Widgets" tags="widget" position="850,225" size="100,100">&lt;&lt;widget boolean-update-doors&gt;&gt;
+  /* lever 2 defaults to locked */
+  &lt;&lt;set _lever2 = ($isLever2Locked === undefined) || $isLever2Locked&gt;&gt;
+  &lt;&lt;set $isLabCLocked = $isLever1Locked || _lever2&gt;&gt;
+  &lt;&lt;set $isLabBLocked = _lever2&gt;&gt;
+&lt;&lt;/widget&gt;&gt;</tw-passagedata><tw-passagedata pid="18" name="Boolean:LabC" tags="" position="975,225" size="100,100">TODO: Story about the cat &gt;^-.-^&lt;
+
+&lt;&lt;return&gt;&gt;</tw-passagedata><tw-passagedata pid="19" name="Widgets" tags="widget" position="1100,225" size="100,100">/* text, roomName, variable, defaultValue */
 &lt;&lt;widget door&gt;&gt; \
     &lt;&lt;link _args[0]&gt;&gt;
         &lt;&lt;if State.variables[_args[2]] === undefined &gt;&gt;

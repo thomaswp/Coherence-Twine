@@ -7,7 +7,6 @@ function gameInit() {
         "isDoorLocked": true,
     };
 	const booleanMap = {
-		"isLever1Locked": false,
 	}
 
 	const levelMap = {

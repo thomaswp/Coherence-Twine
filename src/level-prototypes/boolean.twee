@@ -1,77 +1,114 @@
 
 :: Boolean:Start
 
-Your notes so far indicate that you need to find Research Lab B, and your explorations have brought you to a room, with a door the North, East and West and a desk with a console in the center.
-* <<link "Go East">>
-    <<replace #outcome>>
-    As you get closer, you see that entry button on the East door is broken.
-    <</replace>>
-  <</link>>
+Your notes so far indicate that you need to find Research Lab B, and your explorations have brought you to a room, with a door the North, East and West, a travel chamber in the center, and a desk with a console in the center.
+/* * <<link "Go East">>
+    <<if $time==0>>
+      <<goto "Boolean:LabA">>
+    <<else>>
+      <<replace #outcome>>
+      As you get closer, you see that entry button on the East door is broken.
+      <</replace>>
+    <</if>>
+  <</link>> */
+* [[Go East|Boolean:LabA]]
 * <<door "Go North" "Boolean:LabB" "isLabBLocked" true>>
-* [[Go West|Boolean:LabCHall]]
+* <<door "Go West" "Boolean:LabC" "isLabCLocked" false >>
 * [[Look at the Console|Boolean:Start:Console]]
+* [[Enter the Travel Chamber|Boolean:TravelChamber]]
 
 <span id="outcome"></span>
 
 :: Boolean:Start:Console
 
 You a map of the laboratories, showing that:
-* Research Lab A is to the East
+* Research Labs A and D are to the East
 * Research Lab B is to the North
 * Research Lab C is to the West
 
 You also see an audio note that reads:
-> ''[T-572] Liza'': Ed, I think you're going to be dropping by the labs soon, and since you've forgotten the last few times, just a reminder that the isolation lever in Lab A controls entry to //both// B and C. Be careful with that one -- easy to overexpose yourself.
+> ''[T-572] Liza'': Ed, I think you're going to be dropping by the labs soon, and since you've forgotten the last few times, just a reminder that the isolation lever in Lab D controls entry to //both// B and C. Be careful with that one -- easy to overexpose yourself.
 
 <<return>>
+
+:: Boolean:TravelChamber
+
+You enter the travel chamber.
+<<if $time==0>>
+  /* 
+  The weird thing about this condition is that it doesn't need to be 
+  true necessarily. You could update and observe things in the past, come
+  back to the present, and then reasonably safely travel back in time. The
+  way you're currently organizing it, you can pretty much only ever
+  travel back in time once if you do anything there, which isn't really
+  how it's intended. Not a big deal because you can always reset.
+  */
+  <<if $isLabBLocked === undefined && $isLever1Locked === undefined>>
+* [[Travel back in time.|Boolean:Start][$time to -1]]
+  <<else>>
+    The button is a dull gray, clearly disabled.
+  <</if>>
+<<else>>
+  <<link "Travel forward in time.">>
+    <<goto "Boolean:Start">>
+    <<set $time=0>>
+    <<if $isLever1Locked && !$isLabCLocked>>
+      <<set $isLever2Locked = false>>
+      <<boolean-update-doors>>
+    <</if>>
+  <</link>>
+<</if>>
+<<return>>
+
+:: Boolean:LabA
+
+You enter into a room with a door on the East and West side, but the Eastern door has clearly been damaged beyond use. There is a console along the wall with an odd looking lever beside it.
+
+* [[Look at the Console|Boolean:LabA:Console]]
+* [[Inspect the lever|Boolean:LabA:Lever]]
+* [[Return West|Boolean:Start]]
+
+
+:: Boolean:LabA:Console
+
+The console has an audio note that reads:
+> ''[T-523] Edwin'': L, thanks for the tip about the lever. You're totally right, I almost locked myself out of traveling with that one. But I do need to get into Lab C, so I've jury-rigged another isolation lever to get in. Hope I'm not messing anyone up there. 
+/* Also, did you notice the Lab A door is on the fritz? I barely made it in here. I'll put in an order to have that repaired. */
+
+<<return>>
+
+:: Boolean:LabA:Lever
+
+<<if $isLever1Locked===undefined>>
+  <<set $isLever1Locked = false>>
+<</if>>
+
+The lever has exposed wiring and looks poorly constructed.
+* <<link "Pull the lever">>
+  <<set $isLever1Locked=!$isLever1Locked>>
+  <<boolean-update-doors>>
+  <<goto "Boolean:LabA:Lever">>
+<</link>> (currently set to <<if $isLever1Locked>>locked<<else>>unlocked<</if>>)
+
+<<return>>
+
 
 :: Boolean:LabB
 
 Congrats!
 <<return>>
 
-:: Boolean:LabCHall
-
-You enter into a hallway with a door on each side and a console along the wall with an odd looking lever beside it:
-* [[Go East|Boolean:Start]]
-* <<door "Go West" "Boolean:LabC" "isLabCLocked" false >>
-* [[Look at the Console|Boolean:LabCHall:Console]]
-* [[Inspect the lever|Boolean:LabCHall:Lever]]
-<span id="outcome"></span>
-
-<<return>>
-
-:: Boolean:LabCHall:Console
-
-The console has an audio note that reads:
-> ''[T-523] Edwin'': L, thanks for the tip about the lever. You're totally right, I almost locked myself out of traveling with that one. But I do need to get into Lab C, so I've jury-rigged another isolation lever to get in. Hope I'm not messing anyone up there.
-
-<<return>>
-
-:: Boolean:LabCHall:Lever
-
-The lever has exposed wiring and looks poorly constructed.
-* <<link "Pull the lever">>
-  <<set $isLever1Locked=!$isLever1Locked>>
-  <<boolean-update-doors>>
-  <<goto "Boolean:LabCHall:Lever">>
-<</link>> (currently set to <<if $isLever1Locked>>locked<<else>>unlocked<</if>>)
-
-<<return>>
-
 :: Boolean:Widgets [widget]
 <<widget boolean-update-doors>>
-  /* Need to update once time travel and such */
-<<set $isLabCLocked=$isLever1Locked>>
+  /* lever 2 defaults to locked */
+  <<set _lever2 = ($isLever2Locked === undefined) || $isLever2Locked>>
+  <<set $isLabCLocked = $isLever1Locked || _lever2>>
+  <<set $isLabBLocked = _lever2>>
 <</widget>>
+
 
 :: Boolean:LabC
 
-There is a travel chamber in the lab.
-/* Disable if appropriate */
-<<if $time==0>>
-* [[Travel back in time.|Boolean:LabC][$time to -1]]
-<<else>>
-* [[Travel forward in time.|Boolean:LabC][$time to 0]]
-<</if>>
+TODO: Story about the cat >^-.-^<
+
 <<return>>

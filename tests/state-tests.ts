@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { System, Observation, MutableVariable, DerivedVariable } from '../ts/state'
+import { System, MutableVariable, DerivedVariable } from '../ts/state'
 
 type BooleanSystem = {
     lever1: MutableVariable;

@@ -237,12 +237,12 @@ export class World {
         console.log(`Traveling to t${time}; reconciling states...`);
         console.log(`Past partial state`, pastState);
         console.log('Present partial state', presentState);
-        console.log(consistentState.inspect());
 
         if (!consistentState) {
             console.log(`Cannot travel to time ${time} because of a logical contradiction.`)
             return false;
         }
+        console.log(consistentState.inspect());
 
         if (!dryRun) {
             for (let v of this.variables) {

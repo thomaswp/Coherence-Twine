@@ -73,7 +73,7 @@ describe('World', () => {
         expect(system.travelTo(0)).toBe(true);
         expect(system.get(doorB)).toBe(true);
         expect(system.get(lever1)).toBe(true);
-    })
+    });
 
     it('has a solution', () => {
         const {
@@ -86,5 +86,48 @@ describe('World', () => {
         system.set(lever1, true);
         expect(system.travelTo(0)).toBe(true);
         expect(system.get(doorC)).toBe(false);
-    })
+    });
+
+    it('does not have a simple solution', () => {
+        const {
+            lever1, lever2,
+            doorB, doorC,
+            world: system
+        } = createBooleanWorld();
+        expect(system.travelTo(-1)).toBe(true);
+        system.set(lever1, true);
+        expect(system.travelTo(0)).toBe(true);
+        expect(system.get(doorC)).toBe(true);
+    });
+
+    it('brooks no contradictions', () => {
+        const {
+            lever1, lever2,
+            doorB, doorC,
+            world: system
+        } = createBooleanWorld();
+        expect(system.get(doorC)).toBe(true);
+        expect(system.get(doorB)).toBe(false);
+        expect(system.travelTo(-1)).toBe(true);
+        expect(system.get(lever1)).toBe(false);
+        expect(system.canTravelTo(0)).toBe(true);
+        system.set(lever1, true);
+        expect(system.travelTo(0)).toBe(false);
+        system.set(lever1, false);
+        expect(system.travelTo(0)).toBe(true);
+    });
+
+    it('brooks not even a simple one', () => {
+        const {
+            lever1, lever2,
+            doorB, doorC,
+            world: system
+        } = createBooleanWorld();
+        expect(system.get(lever1)).toBe(false);
+        expect(system.travelTo(-1)).toBe(true);
+        system.set(lever1, true);
+        expect(system.travelTo(0)).toBe(false);
+        system.set(lever1, false);
+        expect(system.travelTo(0)).toBe(true);
+    });
 })

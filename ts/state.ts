@@ -39,8 +39,13 @@ function copyMap<Q,P>(map: Map<Q,P>) {
     return new Map<Q,P>(map);
 }
 
+
 // Contains values for all variables
 type ConcreteState = Map<Variable, boolean>;
+
+function inspectState(state: ConcreteState) {
+    return new Map([...state.entries()].map(([k, v]) => [k.name, v]));
+}
 
 export class PartialState {
     constructor(
@@ -114,8 +119,8 @@ export class PartialState {
         return {
             'mutableVariables': this.mutableVariables.map(v => v.name),
             'derivedVariables': this.derivedVariables.map(v => v.name),
-            'observedVariables': new Map([...this.observedValues.entries()].map(([k, v]) => [k.name, v])),
-            'concreteVariables': new Map([...this.toConcreteState().entries()].map(([k, v]) => [k.name, v])),
+            'observedVariables': inspectState(this.observedValues),
+            'concreteVariables': inspectState(this.toConcreteState()),
         }
     }
 }
@@ -174,7 +179,7 @@ export class World {
             // if we prevent contradictions correctly.
             throw Error("Unresolvable contradiction!");
         }
-        console.log(state.inspect());
+        // console.log(state.inspect());
         return state.getConcreteValue(variable);
     }
 
@@ -234,9 +239,9 @@ export class World {
 
         const partialState = new PartialState(this.mutableVariables, this.derivedVariables, mergedState);
         const consistentState = partialState.findConsistentState();
-        console.log(`Traveling to t${time}; reconciling states...`);
-        console.log(`Past partial state`, pastState);
-        console.log('Present partial state', presentState);
+        console.log(`${dryRun ? "Testing travel" : "Traveling"} to t${time}; reconciling states...`);
+        console.log(`Past partial state`, inspectState(pastState));
+        console.log('Present partial state', inspectState(presentState));
 
         if (!consistentState) {
             console.log(`Cannot travel to time ${time} because of a logical contradiction.`)

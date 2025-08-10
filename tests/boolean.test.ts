@@ -59,7 +59,7 @@ describe('PartialState', () => {
     })
 })
 
-describe('World', () => {
+describe('Boolean World', () => {
 
     it('carries state forward', () => {
         const {

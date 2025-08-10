@@ -11,15 +11,15 @@ type BooleanSystem = {
 
 function createBooleanWorld(): BooleanSystem {
     
-    const lever1 = new MutableVariable('lever1Locked', false);
-    const lever2 = new MutableVariable('lever2Locked', true);
-    const doorB = new DerivedVariable('labBLocked', [
+    const lever1 = new MutableVariable('lever1', true);
+    const lever2 = new MutableVariable('lever2', false);
+    const doorB = new DerivedVariable('labBOpen', [
             lever1, lever2
         ], (state) => {
-            return state.get(lever1) && state.get(lever2);
+            return state.get(lever1) || state.get(lever2);
         }
     );
-    const doorC = new DerivedVariable('labCLocked', 
+    const doorC = new DerivedVariable('labCOpen',
         [lever2],
         (state) => state.get(lever2));
 
@@ -48,14 +48,14 @@ describe('PartialState', () => {
             [lever1, lever2], 
             [doorB, doorC], 
             new Map<Variable, boolean>([
-                [lever1, true],
-                [doorC, false]
+                [lever1, false],
+                [doorC, true]
             ]));
         expect(state.isDefaultContradictory()).toBe(true);
         const consistent = state.findConsistentState();
         expect(consistent).toBeTruthy();
         console.log(consistent.inspect());
-        expect(consistent.observedValues.get(lever2)).toBe(false);
+        expect(consistent.observedValues.get(lever2)).toBe(true);
     })
 })
 
@@ -69,10 +69,10 @@ describe('Boolean World', () => {
         } = createBooleanWorld();
 
         expect(system.travelTo(-1)).toBe(true);
-        system.set(lever1, true);
+        system.set(lever1, false);
         expect(system.travelTo(0)).toBe(true);
-        expect(system.get(doorB)).toBe(true);
-        expect(system.get(lever1)).toBe(true);
+        expect(system.get(doorB)).toBe(false);
+        expect(system.get(lever1)).toBe(false);
     });
 
     it('has a solution', () => {
@@ -81,11 +81,11 @@ describe('Boolean World', () => {
             doorB, doorC,
             world: system
         } = createBooleanWorld();
-        expect(system.get(doorB)).toBe(false);
+        expect(system.get(doorB)).toBe(true);
         expect(system.travelTo(-1)).toBe(true);
-        system.set(lever1, true);
+        system.set(lever1, false);
         expect(system.travelTo(0)).toBe(true);
-        expect(system.get(doorC)).toBe(false);
+        expect(system.get(doorC)).toBe(true);
     });
 
     it('does not have a simple solution', () => {
@@ -95,9 +95,9 @@ describe('Boolean World', () => {
             world: system
         } = createBooleanWorld();
         expect(system.travelTo(-1)).toBe(true);
-        system.set(lever1, true);
+        system.set(lever1, false);
         expect(system.travelTo(0)).toBe(true);
-        expect(system.get(doorC)).toBe(true);
+        expect(system.get(doorC)).toBe(false);
     });
 
     it('brooks no contradictions', () => {
@@ -106,14 +106,14 @@ describe('Boolean World', () => {
             doorB, doorC,
             world: system
         } = createBooleanWorld();
-        expect(system.get(doorC)).toBe(true);
-        expect(system.get(doorB)).toBe(false);
+        expect(system.get(doorC)).toBe(false);
+        expect(system.get(doorB)).toBe(true);
         expect(system.travelTo(-1)).toBe(true);
-        expect(system.get(lever1)).toBe(false);
+        expect(system.get(lever1)).toBe(true);
         expect(system.canTravelTo(0)).toBe(true);
-        system.set(lever1, true);
-        expect(system.travelTo(0)).toBe(false);
         system.set(lever1, false);
+        expect(system.travelTo(0)).toBe(false);
+        system.set(lever1, true);
         expect(system.travelTo(0)).toBe(true);
     });
 
@@ -123,11 +123,11 @@ describe('Boolean World', () => {
             doorB, doorC,
             world: system
         } = createBooleanWorld();
-        expect(system.get(lever1)).toBe(false);
+        expect(system.get(lever1)).toBe(true);
         expect(system.travelTo(-1)).toBe(true);
-        system.set(lever1, true);
-        expect(system.travelTo(0)).toBe(false);
         system.set(lever1, false);
+        expect(system.travelTo(0)).toBe(false);
+        system.set(lever1, true);
         expect(system.travelTo(0)).toBe(true);
     });
 })

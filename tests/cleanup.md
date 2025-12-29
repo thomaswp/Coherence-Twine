@@ -18,10 +18,23 @@ Doors:
 * C = L2
 
 Solution:
-* Observe A = Open
+* Go to Travel room
+    * Observe A = Open
+    * Don't observe C = Closed
 * Travel to T-1
-* Set L1 = Closed
-* Go to B
-* Set L2 = Open
-* Go to C
-* 
+* Go to L1
+    * Set L1 = Closed
+    * B becomes open because L2 defaults to closed
+* Go to L2
+    * Could check Goal room, but it's empty at T-1
+    * Set L2 = Open
+    * B becomes closed, and C becomes open
+* Go to the Travel room
+* Go to L1
+    * Set L1 = Open
+    * Removes the contradiction, since you observed A = Open at T0
+* Go to the Travel room
+    * Travel to T0
+    * State is both L1 = Open and L2 = Open
+* Go to L2
+* Go to Goal

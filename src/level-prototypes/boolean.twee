@@ -21,7 +21,7 @@ Your notes so far indicate that you need to find Research Lab B, and your explor
 
 :: Boolean:Start:Console
 
-You a map of the laboratories, showing that:
+You see a map of the laboratories, showing that:
 * Research Labs A and D are to the East
 * Research Lab B is to the North
 * Research Lab C is to the West
@@ -102,6 +102,7 @@ Congrats!
 <<widget boolean-update-doors>>
   /* lever 2 defaults to locked */
   <<set _lever2 = ($isLever2Locked === undefined) || $isLever2Locked>>
+  /* TODO: Shouldn't this be &&, since it's about _closed? */
   <<set $isLabCLocked = $isLever1Locked || _lever2>>
   <<set $isLabBLocked = _lever2>>
 <</widget>>

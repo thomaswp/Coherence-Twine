@@ -372,7 +372,7 @@ The south door returns to the Entryway.
 * [[Look at the Console|Boolean:Start:Console]]
 * [[Enter the Travel Chamber|Boolean:TravelChamber]]
 
-&lt;span id=&quot;outcome&quot;&gt;&lt;/span&gt;</tw-passagedata><tw-passagedata pid="11" name="Boolean:Start:Console" tags="" position="100,225" size="100,100">You a map of the laboratories, showing that:
+&lt;span id=&quot;outcome&quot;&gt;&lt;/span&gt;</tw-passagedata><tw-passagedata pid="11" name="Boolean:Start:Console" tags="" position="100,225" size="100,100">You see a map of the laboratories, showing that:
 * Research Labs A and D are to the East
 * Research Lab B is to the North
 * Research Lab C is to the West
@@ -428,6 +428,7 @@ The lever has exposed wiring and looks poorly constructed.
 &lt;&lt;return&gt;&gt;</tw-passagedata><tw-passagedata pid="17" name="Boolean:Widgets" tags="widget" position="850,225" size="100,100">&lt;&lt;widget boolean-update-doors&gt;&gt;
   /* lever 2 defaults to locked */
   &lt;&lt;set _lever2 = ($isLever2Locked === undefined) || $isLever2Locked&gt;&gt;
+  /* TODO: Shouldn&#39;t this be &amp;&amp;, since it&#39;s about _closed? */
   &lt;&lt;set $isLabCLocked = $isLever1Locked || _lever2&gt;&gt;
   &lt;&lt;set $isLabBLocked = _lever2&gt;&gt;
 &lt;&lt;/widget&gt;&gt;</tw-passagedata><tw-passagedata pid="18" name="Boolean:LabC" tags="" position="975,225" size="100,100">TODO: Story about the cat &gt;^-.-^&lt;

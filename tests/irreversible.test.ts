@@ -1,6 +1,10 @@
 import { describe, it, expect } from 'vitest'
 import { World, MutableVariable, DerivedVariable, PartialState, Variable } from '../ts/state'
 
+// This isn't implemented yet...
+// TODO: 1) decide whether irreversible actions should prevent travel
+//       2) design a level for the mechanic
+
 type CleanUpSystem = {
     lever1: MutableVariable;
     lever2: MutableVariable;

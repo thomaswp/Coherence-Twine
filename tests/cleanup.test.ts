@@ -15,7 +15,7 @@ function createWorld(): CleanUpSystem {
     const lever1 = new MutableVariable('lever1', true);
     const lever2 = new MutableVariable('lever2', false);
     const doorA = new DerivedVariable('doorAOpen', [
-        lever1, lever2
+        lever1
     ], (state) => {
         return state.get(lever1);
     });

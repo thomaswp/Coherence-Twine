@@ -52,8 +52,7 @@ describe('CleanUp PartialState', () => {
             world
         } = createWorld();
         const state = new PartialState(
-            [lever1, lever2], 
-            [doorA, doorB, doorC], 
+            world,
             new Map<Variable, boolean>([
                 [doorA, true],
                 [lever1, true],
@@ -71,8 +70,7 @@ describe('CleanUp PartialState', () => {
             world
         } = createWorld();
         const state = new PartialState(
-            [lever1, lever2], 
-            [doorA, doorB, doorC], 
+            world,
             new Map<Variable, boolean>([
                 [doorA, true],
                 [lever1, false],

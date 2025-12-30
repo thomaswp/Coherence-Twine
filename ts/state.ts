@@ -1,4 +1,4 @@
-import { assert } from "vitest";
+import { assert, should } from "vitest";
 
 
 
@@ -21,7 +21,11 @@ export class MutableVariable extends Variable {
     }
 }
 
-export class DerivedVariable extends Variable {
+interface DependentVariable {
+    isDependentOn(variable: Variable): boolean;
+}
+
+export class DerivedVariable extends Variable implements DependentVariable {
     constructor(
         name: string,
         public readonly dependencies: MutableVariable[],
@@ -30,8 +34,39 @@ export class DerivedVariable extends Variable {
         super(name);
     }
 
+    isDependentOn(variable: Variable): boolean {
+        return this.dependencies.includes(variable as MutableVariable);
+    }
+
     deriveValue(state: ConcreteState) {
         return this.getValue(state);
+    }
+}
+
+export class TriggeredVariable extends Variable implements DependentVariable {
+    constructor(
+        name: string,
+        // Dependencies are mutable or derived
+        private readonly dependencies: Variable[],
+        private readonly isTriggered: (state: ConcreteState) => boolean
+    ) { 
+        super(name);
+    }
+
+    isDependentOn(variable: Variable): boolean {
+        for (let dep of this.dependencies) {
+            if (dep === variable) return true;
+            if (dep instanceof DerivedVariable || dep instanceof TriggeredVariable) {
+                if (dep.isDependentOn(variable)) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    shouldTrigger(state: ConcreteState) {
+        return this.isTriggered(state);
     }
 }
 
@@ -49,10 +84,21 @@ function inspectState(state: ConcreteState) {
 
 export class PartialState {
     constructor(
-        readonly mutableVariables: MutableVariable[],
-        readonly derivedVariables: DerivedVariable[],
+        readonly world : World,
         readonly observedValues = new Map<Variable, boolean>()
     ) {}
+
+    get mutableVariables() {
+        return this.world.mutableVariables;
+    }
+
+    get derivedVariables() {
+        return this.world.derivedVariables;
+    }
+
+    get triggeredVariables() {
+        return this.world.triggeredVariables;
+    }
 
     // Here we assume that any unobserved variables will
     // have their default values.
@@ -107,18 +153,34 @@ export class PartialState {
             }
             state.set(dv, value);
         }
+        // We check triggered variables here because they could have
+        // been triggered by a combination observations in the two merged states
+        // and thus not yet triggered.
+        for (const tv of this.triggeredVariables) {
+            const shouldTrigger = tv.shouldTrigger(state);
+            const existingValue = state.get(tv);
+            // If we've already observed that this _hasn't_ triggered, 
+            // but it would have in this state, that's a contradiction
+            if (existingValue === false && shouldTrigger) {
+                return null;
+            }
+            // Otherwise, set it to the existing value (if present)
+            // or the newly triggered value
+            state.set(tv, existingValue ?? shouldTrigger);
+        }
         return state;
     }
 
     copy() {
         const observed = copyMap(this.observedValues);
-        return new PartialState(this.mutableVariables, this.derivedVariables, observed);
+        return new PartialState(this.world, observed);
     }
 
     inspect() {
         return {
             'mutableVariables': this.mutableVariables.map(v => v.name),
             'derivedVariables': this.derivedVariables.map(v => v.name),
+            'triggeredVariables': this.triggeredVariables.map(v => v.name),
             'observedVariables': inspectState(this.observedValues),
             'concreteVariables': inspectState(this.toConcreteState()),
         }
@@ -129,6 +191,9 @@ export class World {
 
     timePeriods = new Map<number, TimePeriod>();
     currentPeriod: TimePeriod;
+    public readonly mutableVariables: readonly MutableVariable[];
+    public readonly derivedVariables: readonly DerivedVariable[]
+    public readonly triggeredVariables: readonly TriggeredVariable[];
 
     constructor(
         public readonly variables: Variable[],
@@ -136,19 +201,16 @@ export class World {
     ) {
         this.currentPeriod = new TimePeriod(this, currentTime);
         this.timePeriods.set(currentTime, this.currentPeriod);
+        this.mutableVariables = this.variables.filter(v => v instanceof MutableVariable) as MutableVariable[];
+        this.derivedVariables = this.variables.filter(v => v instanceof DerivedVariable) as DerivedVariable[];
+        this.triggeredVariables = this.variables.filter(v => v instanceof TriggeredVariable) as TriggeredVariable[];
     }
 
     get currentTime() { return this.currentPeriod.time; }
 
-    get mutableVariables() { return this.variables.filter (v => v instanceof MutableVariable); }
-
-    get derivedVariables() { return this.variables.filter (v => v instanceof DerivedVariable); }
-
     getPartialState() {
-        const mutable = this.mutableVariables;
-        const derived = this.derivedVariables;
         const observed = this.currentPeriod.toPartialConcreteEndState();
-        return new PartialState(mutable, derived, observed)
+        return new PartialState(this, observed)
     }
 
     set(variable: MutableVariable, value: boolean, observeFirst = true, observeAfter = true) {
@@ -158,9 +220,27 @@ export class World {
         this.currentPeriod.variableWasModified(variable, value);
         if (!variable.reversible) {
             // TODO: check for contradictions and update state!
+            // May not be needed for realistic scenarios (see notes)
         }
         if (observeAfter) {
             this.currentPeriod.variableWasObserved(variable, value);
+        }
+        this.checkForTriggeredVariables(variable);
+    }
+
+    checkForTriggeredVariables(updatedVariable: Variable) {
+        for (let triggered of this.triggeredVariables) {
+            if (
+                triggered.isDependentOn(updatedVariable) &&
+                // This should only be true if we know it's already been triggered
+                !this.currentPeriod.peekValue(triggered) 
+            ) {
+                const shouldTrigger = triggered.shouldTrigger(this.getPartialState().toConcreteState());
+                if (shouldTrigger) {
+                    // Observing "locks in" the triggered variable as true
+                    this.currentPeriod.variableWasModified(triggered, true);
+                }
+            }
         }
     }
 
@@ -237,7 +317,7 @@ export class World {
             return false;
         }
 
-        const partialState = new PartialState(this.mutableVariables, this.derivedVariables, mergedState);
+        const partialState = new PartialState(this, mergedState);
         const consistentState = partialState.findConsistentState();
         console.log(`${dryRun ? "Testing travel" : "Traveling"} to t${time}; reconciling states...`);
         console.log(`Past partial state`, inspectState(pastState));
@@ -356,7 +436,7 @@ export class TimePeriod {
     // }
 
     /** 
-     * Returns the last observed value for the variable, or a know start value if present. 
+     * Returns the last observed value for the variable, or a known start value if present. 
      * Does not return the variable's default value.
      */
     peekValue(variable: Variable) : boolean | undefined {
@@ -370,14 +450,14 @@ export class TimePeriod {
         state.couldHaveBeenModifiedSinceObserved = false;
     }
 
-    variableWasModified(modified: MutableVariable, value: boolean) {
+    variableWasModified(modified: MutableVariable | TriggeredVariable, value: boolean) {
         const state = this.varStates.get(modified);
         state.couldHaveBeenModifiedAfterStart = true;
         state.couldHaveBeenModifiedSinceObserved = true;
         state.currentValue = value;
         for (let dependent of this.world.variables) {
             if (dependent instanceof DerivedVariable) {
-                if (dependent.dependencies.includes(modified)) {
+                if (dependent.isDependentOn(modified)) {
                     this.varStates.get(dependent).couldHaveBeenModifiedSinceObserved = true;
                     this.updateCouldHaveBeenObserved(dependent);
                 }

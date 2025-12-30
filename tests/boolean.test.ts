@@ -45,8 +45,7 @@ describe('PartialState', () => {
             world
         } = createBooleanWorld();
         const state = new PartialState(
-            [lever1, lever2], 
-            [doorB, doorC], 
+            world,
             new Map<Variable, boolean>([
                 [lever1, false],
                 [doorC, true]

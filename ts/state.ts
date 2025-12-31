@@ -85,7 +85,9 @@ function inspectState(state: ConcreteState) {
 export class PartialState {
     constructor(
         readonly world : World,
-        readonly observedValues = new Map<Variable, boolean>()
+        readonly observedValues = new Map<Variable, boolean>(),
+        /** If true, triggers must match explicitly */
+        public resolveMissingTriggers = false,
     ) {}
 
     get mutableVariables() {
@@ -147,7 +149,7 @@ export class PartialState {
         for (const dv of this.derivedVariables) {
             const value = dv.deriveValue(state);
             const existingValue = state.get(dv);
-            if (existingValue != undefined && existingValue != value) {
+            if (existingValue !== undefined && existingValue !== value) {
                 // Could return the actual contradiction
                 return null;
             }
@@ -159,6 +161,16 @@ export class PartialState {
         for (const tv of this.triggeredVariables) {
             const shouldTrigger = tv.shouldTrigger(state);
             const existingValue = state.get(tv);
+            
+            // If we're resolving missing triggers, we compare exactly
+            if (this.resolveMissingTriggers) {
+                if (existingValue !== undefined && existingValue !== shouldTrigger) {
+                    return null;
+                }
+                state.set(tv, shouldTrigger);
+                continue;
+            }
+
             // If we've already observed that this _hasn't_ triggered, 
             // but it would have in this state, that's a contradiction
             if (existingValue === false && shouldTrigger) {
@@ -173,7 +185,7 @@ export class PartialState {
 
     copy() {
         const observed = copyMap(this.observedValues);
-        return new PartialState(this.world, observed);
+        return new PartialState(this.world, observed, this.resolveMissingTriggers);
     }
 
     inspect() {
@@ -235,10 +247,11 @@ export class World {
                 // This should only be true if we know it's already been triggered
                 !this.currentPeriod.peekValue(triggered) 
             ) {
-                const shouldTrigger = triggered.shouldTrigger(this.getPartialState().toConcreteState());
+                const currentState = this.getPartialState();
+                const shouldTrigger = triggered.shouldTrigger(currentState.toConcreteState());
                 if (shouldTrigger) {
                     // Observing "locks in" the triggered variable as true
-                    this.currentPeriod.variableWasModified(triggered, true);
+                    this.currentPeriod.variableWasTriggered(triggered);
                 }
             }
         }
@@ -343,6 +356,56 @@ export class World {
             this.currentPeriod = destination
         }
 
+        for (const [triggered, antecedent] of destination.antecedents.entries()) {
+            // Create a hypothetical state at the time of a triggered variable
+            let hypotheticalState = consistentState.copy();
+            for (const v of this.variables)  {
+                if (v === triggered) continue;
+                if (triggered.isDependentOn(v)) continue;
+                // Ignore anything that is irrelevant to the triggering
+                // so we don't encounter contradictions from unrelated observations
+                // TODO: This could possible cause some contradictions too...
+                hypotheticalState.observedValues.delete(v);
+            }
+            
+            // Theoretically we should be able to find a consistent state here...
+            hypotheticalState = hypotheticalState.findConsistentState();
+            if (!hypotheticalState) {
+                throw Error(`Internal error: Could not reconcile triggered variable ${triggered.name} at time ${time}`);
+            }
+
+            for (const [k, v] of antecedent.observedDependencies.entries()) {
+                // Some values we observed at the time of triggering,
+                // so we set them explicitly
+                hypotheticalState.observedValues.set(k, v);
+            }
+            hypotheticalState.observedValues.set(triggered, true);
+            // Important: resolve differences in triggers exactly
+            hypotheticalState.resolveMissingTriggers = true;
+
+            // If this works, the trigger didn't cause a contradiction
+            // with the default state as we know it.
+            if (!hypotheticalState.isDefaultContradictory()) continue;
+
+            // Otherwise, we need to try to reconcile the contradiction
+            const resolvedState = hypotheticalState.findConsistentState();
+            if (!resolvedState) {
+                console.log(`Cannot travel to time ${time} because of a contradiction from triggered variable ${triggered.name}.`)
+                return false;
+            }
+
+            if (dryRun) continue;
+
+            const originalState = hypotheticalState.observedValues;
+            for (const [k, v] of resolvedState.observedValues.entries()) {
+                const existingValue = originalState.get(k);
+                if (existingValue !== v) {
+                    console.log(`Overwriting start state for t${time}/${k.name} due to triggered variable ${triggered.name}: ${existingValue}->${v}`);
+                    destination.overrideStartState(k, v);
+                }
+            }
+        }
+
         return true;
     }
 
@@ -373,13 +436,25 @@ type VarState = {
     // to a previously unseen time period
     /** A fixed starting value for this variable, if known. */
     startValue: boolean | undefined,
-    /** The most recent observed value for this variable, or unknown if currently unobserved. */
+    /** The most recent observed value for this variable, or unknown if currently unobserved. 
+     * Only appropriate for MutableVariables where setting is direct.
+    */
     currentValue: boolean | undefined,
+    /** The last observed value for this variable, or unknown if it could have changed since its last observation. */
+    lastObservedValue: boolean | undefined,
+}
+
+type TriggeringState = {
+    // TODO: I don't think this is needed or possible to accurately track
+    // and the incoming partial state contains that info anyway.
+    unobservedDependencies: Variable[],
+    observedDependencies: ConcreteState,
 }
 
 export class TimePeriod {
 
     private varStates = new Map<Variable, VarState>();
+    public readonly antecedents = new Map<TriggeredVariable, TriggeringState>();
 
     constructor(
         public readonly world: World,
@@ -401,7 +476,8 @@ export class TimePeriod {
                 couldHaveBeenModifiedSinceObserved: false,
                 observedStartValue: undefined,
                 startValue: startValues.get(v),
-                currentValue: undefined
+                currentValue: undefined,
+                lastObservedValue: undefined,
             });
         }
     }
@@ -448,6 +524,7 @@ export class TimePeriod {
         const state = this.varStates.get(variable);
         if (!state.couldHaveBeenModifiedAfterStart) state.observedStartValue = value;
         state.couldHaveBeenModifiedSinceObserved = false;
+        state.lastObservedValue = value;
     }
 
     variableWasModified(modified: MutableVariable | TriggeredVariable, value: boolean) {
@@ -455,14 +532,39 @@ export class TimePeriod {
         state.couldHaveBeenModifiedAfterStart = true;
         state.couldHaveBeenModifiedSinceObserved = true;
         state.currentValue = value;
+        state.lastObservedValue = value;
         for (let dependent of this.world.variables) {
             if (dependent instanceof DerivedVariable) {
                 if (dependent.isDependentOn(modified)) {
                     this.varStates.get(dependent).couldHaveBeenModifiedSinceObserved = true;
+                    this.varStates.get(dependent).lastObservedValue = undefined;
                     this.updateCouldHaveBeenObserved(dependent);
                 }
             }
         }
+    }
+
+    variableWasTriggered(variable: TriggeredVariable) {
+        this.variableWasModified(variable, true);
+        const unobservedDependencies: Variable[] = [];
+        const observedDependencies: ConcreteState = new Map();
+        for (let [v, vState] of this.varStates.entries()) {
+            if (!variable.isDependentOn(v)) continue;
+            // If this variable hasn't been modified and we haven't observed its start value,
+            // we don't know its value in the antecedent state
+            if (!vState.observedStartValue && !vState.couldHaveBeenModifiedAfterStart) {
+                unobservedDependencies.push(v);
+                continue;
+            }
+            // If we haven't observed this variable since it was modified,
+            // we can't be sure of its value in the antecedent state
+            if (vState.lastObservedValue === undefined) continue;
+            observedDependencies.set(v, vState.lastObservedValue);
+        }
+        this.antecedents.set(variable, {
+            unobservedDependencies,
+            observedDependencies,
+        });
     }
 
     updateCouldHaveBeenObserved(variable: DerivedVariable) {

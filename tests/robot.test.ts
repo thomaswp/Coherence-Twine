@@ -10,7 +10,7 @@ type RobotSystem = {
     world: World;
 }
 
-function createBooleanWorld(): RobotSystem {
+function createRobotWorld(): RobotSystem {
     
     const lever1 = new MutableVariable('lever1', true);
     const lever2 = new MutableVariable('lever2', false);
@@ -49,7 +49,7 @@ describe('PartialState', () => {
             lever1, lever2,
             doorA, doorB, doorC,
             world
-        } = createBooleanWorld();
+        } = createRobotWorld();
         const state = new PartialState(
             world,
             new Map<Variable, boolean>([
@@ -72,7 +72,7 @@ describe('PartialState', () => {
             lever1, lever2,
             doorA, doorB, doorC,
             world
-        } = createBooleanWorld();
+        } = createRobotWorld();
         const state = new PartialState(
             world,
             new Map<Variable, boolean>([
@@ -91,7 +91,7 @@ describe('PartialState', () => {
             lever1, lever2,
             doorA, doorB, doorC,
             world
-        } = createBooleanWorld();
+        } = createRobotWorld();
         const state = new PartialState(
             world,
             new Map<Variable, boolean>([
@@ -111,7 +111,7 @@ describe('PartialState', () => {
             lever1, lever2,
             doorA, doorB, doorC,
             world
-        } = createBooleanWorld();
+        } = createRobotWorld();
         const state = new PartialState(
             world,
             new Map<Variable, boolean>([
@@ -135,7 +135,7 @@ describe('Robot world', () => {
             lever1, lever2,
             doorA, doorB, doorC,
             world: system
-        } = createBooleanWorld();
+        } = createRobotWorld();
         // Just testing all the doors
         // Since there's no time travel here,
         // we can freely observe all state

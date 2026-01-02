@@ -477,10 +477,12 @@ export class World {
 
                 if (oldValue !== newValue) {
                     console.log(`Overwriting start state for t${periodToModify.time}/${v.name}: ${oldValue}->${newValue}`);
-                    // TODO: When traveling, since this is the start state of the future, shouldn't
-                    // we also modify the present? In case we travel back to this state...
-                    // Right now it causes tests to fail; should look into it more.
-                    // this.currentPeriod.overrideStartState(v, newValue);
+                    // Always override the start state of the current period if
+                    // overriding the past, since the past must carry through
+                    // to the future.
+                    if (periodToModify !== this.currentPeriod) {
+                        this.currentPeriod.overrideStartState(v, newValue);
+                    }
                     periodToModify.overrideStartState(v, newValue);
                 }
             }
@@ -633,7 +635,7 @@ export class TimePeriod {
         if (state.startValue !== undefined) {
             throw Error(`Cannot override start state for ${variable.name} to ${value}; it is already set to ${state.startValue}`);
         }
-        if (state.currentValue !== undefined) {
+        if (state.currentValue !== undefined && state.currentValue !== value) {
             throw Error(`Cannot override start state for ${variable.name} to ${value}; it is already observed as ${state.currentValue}`);
         }
         state.startValue = value;

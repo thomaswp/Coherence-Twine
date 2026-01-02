@@ -27,3 +27,12 @@ Other Vars:
 Assumptions:
 * The robot goes home after it does its business
 * The action it performs does not persist between timelines
+
+Solution:
+* Switch L1 = Open
+  * Automatically observe RG = True
+* Travel T-1
+* Switch L2 = Closed
+* Travel T0
+  * Door A must be open
+* Go to Goal

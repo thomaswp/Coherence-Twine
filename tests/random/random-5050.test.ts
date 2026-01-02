@@ -23,7 +23,8 @@ function createWorld(seed: number) {
 
     const robotGoal = new TriggeredVariable('robotAtGoal',
         [button1, doorA, doorB],
-        (state) => state.get(button1) && (state.get(doorA) || state.get(doorB))
+        (state) => state.get(button1) && (state.get(doorA) || state.get(doorB)),
+        true
     );
 
     const world = new World([

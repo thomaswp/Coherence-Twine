@@ -117,7 +117,10 @@ export class TriggeredVariable extends Variable implements DependentVariable {
         name: string,
         // Dependencies are mutable or derived
         private readonly dependencies: Variable[],
-        private readonly isTriggered: (state: ConcreteState) => boolean
+        private readonly isTriggered: (state: ConcreteState) => boolean,
+        /** If false, the triggered variable resets to its default value when traveling back in time */
+        // TODO: Implement!
+        public readonly isPersistent: boolean
     ) { 
         super(name);
     }
@@ -302,14 +305,39 @@ export class World {
         return new PartialState(this, observed)
     }
 
+    getNextTimePeriod(): TimePeriod | null {
+        // Final the minimum time that's greater than the current time
+        // or null
+        let nextTime: number | null = null;
+        for (let t of this.timePeriods.keys()) {
+            if (t > this.currentTime && (nextTime === null || t < nextTime)) {
+                nextTime = t;
+            }
+        }
+        if (nextTime === null) {
+            return null;
+        }
+        return this.timePeriods.get(nextTime)!;
+    }
+
     set(variable: MutableVariable, value: boolean, observeFirst = true, observeAfter = true) {
         if (observeFirst) {
             this.get(variable)
         }
         this.currentPeriod.variableWasModified(variable, value);
-        if (!variable.reversible) {
-            // TODO: check for contradictions and update state!
-            // May not be needed for realistic scenarios (see notes)
+        
+        const triggeredPersistentVars = this.getTriggeredVariables(variable).filter(tv => tv.isPersistent);
+        // Irreversible mutations and persistent triggered variables cannot be undone
+        // so we have to resolve state now
+        if (!variable.reversible || triggeredPersistentVars.length > 0) {
+            const nextTime = this.getNextTimePeriod();
+            if (nextTime) {
+                // TODO: The problem is the current logic all operates
+                // on the assumption that we're editing the start state of
+                // the future destination, but for this we need to edit
+                // the start state of the current time period.
+                // this.reconcileStateWithFuture(nextTime);
+            }
         }
         if (observeAfter) {
             this.currentPeriod.variableWasObserved(variable, value);
@@ -317,21 +345,31 @@ export class World {
         this.checkForTriggeredVariables(variable);
     }
 
-    checkForTriggeredVariables(updatedVariable: Variable) {
-        for (let triggered of this.triggeredVariables) {
-            if (
-                triggered.isDependentOn(updatedVariable) &&
-                // This should only be true if we know it's already been triggered
-                !this.currentPeriod.peekValue(triggered) 
-            ) {
-                const currentState = this.getPartialState();
-                const shouldTrigger = triggered.shouldTrigger(currentState.toConcreteState());
-                if (shouldTrigger) {
-                    // Observing "locks in" the triggered variable as true
-                    this.currentPeriod.variableWasTriggered(triggered);
-                }
+    private shouldVariableTrigger(updatedVariable: Variable, triggered: TriggeredVariable) {
+        const currentState = this.getPartialState();
+        if (
+            triggered.isDependentOn(updatedVariable) &&
+            // This should only be true if we know it's already been triggered
+            !this.currentPeriod.peekValue(triggered) 
+        ) {
+            const currentState = this.getPartialState();
+            const shouldTrigger = triggered.shouldTrigger(currentState.toConcreteState());
+            if (shouldTrigger) {
+                return true;
             }
         }
+        return false;
+    }
+
+    private getTriggeredVariables(updatedVariable: Variable) {
+        return this.triggeredVariables.filter(tv => this.shouldVariableTrigger(updatedVariable, tv));
+    }
+
+    checkForTriggeredVariables(updatedVariable: Variable) {
+        this.getTriggeredVariables(updatedVariable).forEach(tv => {
+            // console.log(`Triggered variable ${tv.name} activated at time ${this.currentTime}`);
+            this.currentPeriod.variableWasTriggered(tv);
+        });
     }
 
     peek(variable: Variable) {
@@ -398,6 +436,15 @@ export class World {
             return true;
         }
         
+        const result = this.reconcileStateWithFuture(destination, dryRun);
+        if (!dryRun && result) {
+            this.currentPeriod = destination;
+        }
+        return result;
+    }
+
+    private reconcileStateWithFuture(destination: TimePeriod, dryRun = false): boolean {
+        const time = destination.time;
         const pastState = this.currentPeriod.toPartialConcreteEndState();
         const presentState = destination.toPartialConcreteStartState();
         const mergedState = this.tryMergeStates(pastState, presentState);
@@ -429,10 +476,13 @@ export class World {
                     destination.overrideStartState(v, newValue);
                 }
             }
-
-            this.currentPeriod = destination
         }
 
+        return this.resolveAntecedents(destination, consistentState, dryRun);
+    }
+
+    private resolveAntecedents(destination: TimePeriod, consistentState: PartialState, dryRun = false): boolean {
+        const time = destination.time;
         for (const [triggered, antecedent] of destination.antecedents.entries()) {
             // Create a hypothetical state at the time of a triggered variable
             let hypotheticalState = consistentState.copy();

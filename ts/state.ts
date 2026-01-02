@@ -337,6 +337,9 @@ export class World {
             if (nextTime) {
                 // Modify the start state of the *current* time period, since
                 // we aren't traveling forward yet.
+                // TODO: This shouldn't actually try to reconcile the _whole_ present
+                // state; just the part that's irreversible. Otherwise a reversible
+                // lever might cause a contradiction unnecessarily.
                 this.reconcileStateWithFuture(nextTime, false, false);
             }
         }

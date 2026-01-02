@@ -65,9 +65,8 @@ describe('Random 50/50 World', () => {
 
             expect(world.travelTo(-1)).toBe(true);
 
-            // TODO: This should actually trigger resolution!
-            // A good use case for it: can't cause a contradiction
-            // because the randomDoor is unobservable
+            // Irreversible action forces past and present to
+            // reconcile.
             world.set(button1, true);
 
             // Regardless of seed, doorC must open 

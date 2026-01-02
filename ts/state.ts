@@ -325,6 +325,9 @@ export class World {
             this.get(variable)
         }
         this.currentPeriod.variableWasModified(variable, value);
+        if (observeAfter) {
+            this.currentPeriod.variableWasObserved(variable, value);
+        }
         
         const triggeredPersistentVars = this.getTriggeredVariables(variable).filter(tv => tv.isPersistent);
         // Irreversible mutations and persistent triggered variables cannot be undone
@@ -332,15 +335,10 @@ export class World {
         if (!variable.reversible || triggeredPersistentVars.length > 0) {
             const nextTime = this.getNextTimePeriod();
             if (nextTime) {
-                // TODO: The problem is the current logic all operates
-                // on the assumption that we're editing the start state of
-                // the future destination, but for this we need to edit
-                // the start state of the current time period.
-                // this.reconcileStateWithFuture(nextTime);
+                // Modify the start state of the *current* time period, since
+                // we aren't traveling forward yet.
+                this.reconcileStateWithFuture(nextTime, false, false);
             }
-        }
-        if (observeAfter) {
-            this.currentPeriod.variableWasObserved(variable, value);
         }
         this.checkForTriggeredVariables(variable);
     }
@@ -436,52 +434,62 @@ export class World {
             return true;
         }
         
-        const result = this.reconcileStateWithFuture(destination, dryRun);
+        const result = this.reconcileStateWithFuture(destination, dryRun, true);
         if (!dryRun && result) {
             this.currentPeriod = destination;
         }
         return result;
     }
 
-    private reconcileStateWithFuture(destination: TimePeriod, dryRun = false): boolean {
+    private reconcileStateWithFuture(destination: TimePeriod, dryRun = false, modifyFuture: boolean): boolean {
         const time = destination.time;
-        const pastState = this.currentPeriod.toPartialConcreteEndState();
-        const presentState = destination.toPartialConcreteStartState();
-        const mergedState = this.tryMergeStates(pastState, presentState);
+        const currentState = this.currentPeriod.toPartialConcreteEndState();
+        const futureState = destination.toPartialConcreteStartState();
+        const mergedState = this.tryMergeStates(currentState, futureState);
 
         if (!mergedState) {
-            console.log(`Cannot travel to time ${time} because of a direct contradiction.`)
+            console.log(`Cannot reconcile with time ${time} because of a direct contradiction.`)
             return false;
         }
 
         const partialState = new PartialState(this, mergedState);
         const consistentState = partialState.findConsistentState();
-        console.log(`${dryRun ? "Testing travel" : "Traveling"} to t${time}; reconciling states...`);
-        console.log(`Past partial state`, inspectState(pastState));
-        console.log('Present partial state', inspectState(presentState));
+        console.log(`${dryRun ? "Testing reconciliation" : "Reconciling"} with t${time}`);
+        console.log(`Present partial state`, inspectState(currentState));
+        console.log('Future partial state', inspectState(futureState));
 
         if (!consistentState) {
-            console.log(`Cannot travel to time ${time} because of a logical contradiction.`)
+            console.log(`Cannot reconcile with time ${time} because of a logical contradiction.`)
             return false;
         }
-        console.log(consistentState.inspect());
+        console.log('Found consistent state:', consistentState.inspect());
+
+        // The consistent state looks for differences between the end of the past
+        // and the start of the future, which need to be reconciled. We can do that
+        // the start state of the appropriate time period.
+        const stateToVerify = modifyFuture ? futureState : currentState;
+        const periodToModify = modifyFuture ? destination : this.currentPeriod;
 
         if (!dryRun) {
             for (let v of this.variables) {
-                const oldValue = presentState.get(v);
+                const oldValue = stateToVerify.get(v);
                 const newValue = consistentState.observedValues.get(v);
 
                 if (oldValue !== newValue) {
-                    console.log(`Overwriting start state for t${time}/${v.name}: ${oldValue}->${newValue}`);
-                    destination.overrideStartState(v, newValue);
+                    console.log(`Overwriting start state for t${periodToModify.time}/${v.name}: ${oldValue}->${newValue}`);
+                    // TODO: When traveling, since this is the start state of the future, shouldn't
+                    // we also modify the present? In case we travel back to this state...
+                    // Right now it causes tests to fail; should look into it more.
+                    // this.currentPeriod.overrideStartState(v, newValue);
+                    periodToModify.overrideStartState(v, newValue);
                 }
             }
         }
 
-        return this.resolveAntecedents(destination, consistentState, dryRun);
+        return this.resolveAntecedents(destination, consistentState, dryRun, periodToModify);
     }
 
-    private resolveAntecedents(destination: TimePeriod, consistentState: PartialState, dryRun = false): boolean {
+    private resolveAntecedents(destination: TimePeriod, consistentState: PartialState, dryRun = false, periodToModify): boolean {
         const time = destination.time;
         for (const [triggered, antecedent] of destination.antecedents.entries()) {
             // Create a hypothetical state at the time of a triggered variable
@@ -527,8 +535,8 @@ export class World {
             for (const [k, v] of resolvedState.observedValues.entries()) {
                 const existingValue = originalState.get(k);
                 if (existingValue !== v) {
-                    console.log(`Overwriting start state for t${time}/${k.name} due to triggered variable ${triggered.name}: ${existingValue}->${v}`);
-                    destination.overrideStartState(k, v);
+                    console.log(`Overwriting start state for t${periodToModify.time}/${k.name} due to triggered variable ${triggered.name}: ${existingValue}->${v}`);
+                    periodToModify.overrideStartState(k, v);
                 }
             }
         }

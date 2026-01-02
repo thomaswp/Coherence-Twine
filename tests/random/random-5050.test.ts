@@ -46,6 +46,7 @@ function createWorld(seed: number) {
 describe('Random 50/50 World', () => {
     it('has a solution for all seeds', () => {
         for (let seed = 0; seed < 3; seed++) {
+            console.log(`=== testing for seed ${seed} ===`)
             const {
                 button1,
                 randomDoor,

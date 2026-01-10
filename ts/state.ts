@@ -473,7 +473,7 @@ export class World {
             console.log(`Cannot reconcile with time ${time} because of a logical contradiction.`)
             return false;
         }
-        console.log('Found consistent state:', consistentStatePreTriggers.inspect());
+        console.log('Found consistent state before triggers:', consistentStatePreTriggers.inspect());
 
         // The consistent state looks for differences between the end of the past
         // and the start of the future, which need to be reconciled. We can do that
@@ -489,6 +489,9 @@ export class World {
             // resolveAntecedents already logs the reason
             return false;
         }
+        // if (!consistentState.equals(consistentStatePreTriggers)) {
+            console.log('Found consistent state after triggers:', consistentState.inspect());
+        // }
 
         if (!dryRun) {
             for (let v of this.variables) {
@@ -552,17 +555,16 @@ export class World {
                 return null;
             }
 
-            // Just for logging
             const originalState = hypotheticalState.observedValues;
             for (const [k, v] of resolvedState.observedValues.entries()) {
                 const existingValue = originalState.get(k);
                 if (existingValue !== v) {
                     console.log(`Adding override for ${k.name} due to triggered variable ${triggered.name}: ${existingValue}->${v}`);
+                    // Update the consistent state to include this new observation
+                    // (Don't use hypotheticalState; it's had values deleted!)
+                    consistentState.observedValues.set(k, v);
                 }
             }
-
-            // All resolutions have to stack and be mutually consistent
-            consistentState = resolvedState;
         }
 
         // Could theoretically recurse here, but no need unless there

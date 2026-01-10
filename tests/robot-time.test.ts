@@ -59,7 +59,9 @@ describe('Robot Time world', () => {
         expect(system.peek(doorA)).toBe(false);
         expect(system.peek(doorB)).toBe(true);
         expect(system.peek(doorC)).toBe(false);
-        expect(system.peek(robotGoal)).toBe(false);
+
+        // We'd actually observe this
+        expect(system.get(robotGoal)).toBe(false);
 
         // Open door C by pulling lever 1
         system.set(lever1, true);
@@ -173,7 +175,4 @@ describe('Robot Time world', () => {
         // Now we can travel back to period 0
         expect(system.travelTo(0)).toBe(true);
     });
-
-    // TODO: Many more tests and edge cases
-    // TODO: Confirm backwards travel is contradiction-proof
 })

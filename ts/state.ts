@@ -464,16 +464,16 @@ export class World {
         }
 
         const partialState = new PartialState(this, mergedState);
-        const consistentState = partialState.findConsistentState();
+        const consistentStatePreTriggers = partialState.findConsistentState();
         console.log(`### ${dryRun ? "Testing reconciliation" : "Reconciling"} with t${time}`);
         console.log(`Present partial state`, inspectState(currentState));
         console.log('Future partial state', inspectState(futureState));
 
-        if (!consistentState) {
+        if (!consistentStatePreTriggers) {
             console.log(`Cannot reconcile with time ${time} because of a logical contradiction.`)
             return false;
         }
-        console.log('Found consistent state:', consistentState.inspect());
+        console.log('Found consistent state:', consistentStatePreTriggers.inspect());
 
         // The consistent state looks for differences between the end of the past
         // and the start of the future, which need to be reconciled. We can do that
@@ -483,7 +483,10 @@ export class World {
 
         // We resolve antecedents before modifying any states.
         // This means that antecedent modifications happen first
-        if (!this.resolveAntecedents(futurePeriod, consistentState, dryRun, periodToModify)) {
+
+        const consistentState = this.resolveAntecedents(futurePeriod, consistentStatePreTriggers);
+        if (!consistentState) {
+            // resolveAntecedents already logs the reason
             return false;
         }
 
@@ -508,8 +511,9 @@ export class World {
         return true;
     }
 
-    private resolveAntecedents(destination: TimePeriod, consistentState: PartialState, dryRun = false, periodToModify): boolean {
+    private resolveAntecedents(destination: TimePeriod, consistentState: PartialState): PartialState | null {
         const time = destination.time;
+
         for (const [triggered, antecedent] of destination.antecedents.entries()) {
             // Create a hypothetical state at the time of a triggered variable
             let hypotheticalState = consistentState.copy();
@@ -545,22 +549,25 @@ export class World {
             const resolvedState = hypotheticalState.findConsistentState();
             if (!resolvedState) {
                 console.log(`Cannot travel to time ${time} because of a contradiction from triggered variable ${triggered.name}.`)
-                return false;
+                return null;
             }
 
-            if (dryRun) continue;
-
+            // Just for logging
             const originalState = hypotheticalState.observedValues;
             for (const [k, v] of resolvedState.observedValues.entries()) {
                 const existingValue = originalState.get(k);
                 if (existingValue !== v) {
-                    console.log(`Overwriting start state for t${periodToModify.time}/${k.name} due to triggered variable ${triggered.name}: ${existingValue}->${v}`);
-                    periodToModify.overrideStartState(k, v);
+                    console.log(`Adding override for ${k.name} due to triggered variable ${triggered.name}: ${existingValue}->${v}`);
                 }
             }
+
+            // All resolutions have to stack and be mutually consistent
+            consistentState = resolvedState;
         }
 
-        return true;
+        // Could theoretically recurse here, but no need unless there
+        // are triggers causing other triggers...
+        return consistentState;
     }
 
     private tryMergeStates(past: ConcreteState, present: ConcreteState): ConcreteState | undefined {

@@ -26,7 +26,7 @@ function createRobotWorld(): RobotSystem {
             doorA,
         ], (state) => {
             return state.get(doorA);
-        }
+        }, false
     );
 
     const world = new World([

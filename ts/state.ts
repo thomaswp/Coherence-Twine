@@ -444,10 +444,18 @@ export class World {
         return result;
     }
 
-    private reconcileStateWithFuture(destination: TimePeriod, dryRun = false, modifyFuture: boolean): boolean {
-        const time = destination.time;
+    private reconcileStateWithFuture(futurePeriod: TimePeriod, dryRun = false, modifyFuture: boolean): boolean {
+        const time = futurePeriod.time;
         const currentState = this.currentPeriod.toPartialConcreteEndState();
-        const futureState = destination.toPartialConcreteStartState();
+        const futureState = futurePeriod.toPartialConcreteStartState();
+
+        for (const tv of this.triggeredVariables) {
+            if (!tv.isPersistent) {
+                // Non-persistent triggered variables shouldn't be carried forward
+                currentState.delete(tv);
+            }
+        }
+
         const mergedState = this.tryMergeStates(currentState, futureState);
 
         if (!mergedState) {
@@ -457,7 +465,7 @@ export class World {
 
         const partialState = new PartialState(this, mergedState);
         const consistentState = partialState.findConsistentState();
-        console.log(`${dryRun ? "Testing reconciliation" : "Reconciling"} with t${time}`);
+        console.log(`### ${dryRun ? "Testing reconciliation" : "Reconciling"} with t${time}`);
         console.log(`Present partial state`, inspectState(currentState));
         console.log('Future partial state', inspectState(futureState));
 
@@ -471,7 +479,13 @@ export class World {
         // and the start of the future, which need to be reconciled. We can do that
         // the start state of the appropriate time period.
         const stateToVerify = modifyFuture ? futureState : currentState;
-        const periodToModify = modifyFuture ? destination : this.currentPeriod;
+        const periodToModify = modifyFuture ? futurePeriod : this.currentPeriod;
+
+        // We resolve antecedents before modifying any states.
+        // This means that antecedent modifications happen first
+        if (!this.resolveAntecedents(futurePeriod, consistentState, dryRun, periodToModify)) {
+            return false;
+        }
 
         if (!dryRun) {
             for (let v of this.variables) {
@@ -491,7 +505,7 @@ export class World {
             }
         }
 
-        return this.resolveAntecedents(destination, consistentState, dryRun, periodToModify);
+        return true;
     }
 
     private resolveAntecedents(destination: TimePeriod, consistentState: PartialState, dryRun = false, periodToModify): boolean {

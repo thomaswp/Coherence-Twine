@@ -8,14 +8,16 @@
             }
         ]
     },
-    "liveServer.settings.ignoreFiles": [
-        "**/*.tw",
-        "**/*.twee",
-        "**/*.js",
-        "**/*.ts"
-    ],
-    "cSpell.words": [
-        "ifid"
-    ],
-    "twee3LanguageTools.passage.list": true
+    "liveServer.settings.ignoreFiles": ["**/*.tw", "**/*.twee", "**/*.js", "**/*.ts"],
+    "cSpell.words": ["ifid"],
+    "twee3LanguageTools.passage.list": true,
+    "editor.formatOnSave": true,
+    "editor.rulers": [100],
+    "editor.defaultFormatter": "esbenp.prettier-vscode",
+    "[javascript]": {
+        "editor.defaultFormatter": "esbenp.prettier-vscode"
+    },
+    "editor.codeActionsOnSave": {
+        "source.organizeImports": "always"
+    }
 }

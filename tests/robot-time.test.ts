@@ -1,33 +1,25 @@
-import { describe, it, expect } from 'vitest'
-import { World, MutableVariable, DerivedVariable, PartialState, Variable, TriggeredVariable } from '../ts/state'
+import { describe, expect, it } from 'vitest';
+import { DerivedVariable, MutableVariable, TriggeredVariable, World } from '../ts/state';
 
 function createRobotWorld() {
-    
     const lever1 = new MutableVariable('lever1', false);
     const lever2 = new MutableVariable('lever2', true);
     const doorA = new MutableVariable('doorAOpen', false);
 
-    const doorB = new DerivedVariable('doorBOpen',
-        [lever2],
-        (state) => state.get(lever2)
-    );
-    const doorC = new DerivedVariable('doorCOpen',
-        [lever1],
-        (state) => state.get(lever1)
-    );
+    const doorB = new DerivedVariable('doorBOpen', [lever2], (state) => state.get(lever2));
+    const doorC = new DerivedVariable('doorCOpen', [lever1], (state) => state.get(lever1));
     // const doorD = new DerivedVariable('doorDOpen',
     //     [lever1],
     //     (state) => state.get(lever1)
     // );
-    const robotGoal = new TriggeredVariable('robotAtGoal',
+    const robotGoal = new TriggeredVariable(
+        'robotAtGoal',
         [doorA, doorB, doorC],
         (state) => state.get(doorC) && (state.get(doorA) || state.get(doorB)),
-        false
+        false,
     );
 
-    const world = new World([
-        lever1, lever2, doorA, doorB, doorC, robotGoal
-    ]);
+    const world = new World([lever1, lever2, doorA, doorB, doorC, robotGoal]);
 
     return {
         lever1,
@@ -37,22 +29,22 @@ function createRobotWorld() {
         doorC,
         // doorD,
         robotGoal,
-        world
-    }
+        world,
+    };
 }
 
-describe('PartialState', () => {
-    
-})
+describe('PartialState', () => {});
 
 describe('Robot Time world', () => {
-
     it('has a solution', () => {
         const {
-            lever1, lever2,
-            doorA, doorB, doorC,
+            lever1,
+            lever2,
+            doorA,
+            doorB,
+            doorC,
             robotGoal,
-            world: system
+            world: system,
         } = createRobotWorld();
 
         // Testing all the vars and their start state
@@ -83,15 +75,18 @@ describe('Robot Time world', () => {
 
         // Because the robot got to its goal, but not through door B,
         // door A must have been open the whole time
-        expect(system.get(doorA)).toBe(true);        
+        expect(system.get(doorA)).toBe(true);
     });
 
     it('has a nontrivial solution', () => {
         const {
-            lever1, lever2,
-            doorA, doorB, doorC,
+            lever1,
+            lever2,
+            doorA,
+            doorB,
+            doorC,
             robotGoal,
-            world: system
+            world: system,
         } = createRobotWorld();
 
         // If we make the mistake of observing door A as closed at the start
@@ -116,12 +111,15 @@ describe('Robot Time world', () => {
         expect(system.travelTo(0)).toBe(false);
     });
 
-    it('doesn\'t persist the robot action', () => {
+    it("doesn't persist the robot action", () => {
         const {
-            lever1, lever2,
-            doorA, doorB, doorC,
+            lever1,
+            lever2,
+            doorA,
+            doorB,
+            doorC,
             robotGoal,
-            world: system
+            world: system,
         } = createRobotWorld();
 
         system.travelTo(-1);
@@ -131,7 +129,6 @@ describe('Robot Time world', () => {
         // The robot reached it goal even though
         // we reset lever1
         expect(system.get(robotGoal)).toBe(true);
-
 
         expect(system.travelTo(0)).toBe(true);
         expect(system.get(robotGoal)).toBe(false);
@@ -143,10 +140,13 @@ describe('Robot Time world', () => {
 
     it('prevents contradictions on future travel', () => {
         const {
-            lever1, lever2,
-            doorA, doorB, doorC,
+            lever1,
+            lever2,
+            doorA,
+            doorB,
+            doorC,
             robotGoal,
-            world: system
+            world: system,
         } = createRobotWorld();
 
         // Open door C by pulling lever 1
@@ -175,4 +175,4 @@ describe('Robot Time world', () => {
         // Now we can travel back to period 0
         expect(system.travelTo(0)).toBe(true);
     });
-})
+});

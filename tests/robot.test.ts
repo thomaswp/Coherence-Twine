@@ -1,5 +1,12 @@
-import { describe, it, expect } from 'vitest'
-import { World, MutableVariable, DerivedVariable, PartialState, Variable, TriggeredVariable } from '../ts/state'
+import { describe, expect, it } from 'vitest';
+import {
+    DerivedVariable,
+    MutableVariable,
+    PartialState,
+    TriggeredVariable,
+    Variable,
+    World,
+} from '../ts/state';
 
 type RobotSystem = {
     lever1: MutableVariable;
@@ -8,30 +15,27 @@ type RobotSystem = {
     doorB: DerivedVariable;
     doorC: TriggeredVariable;
     world: World;
-}
+};
 
 function createRobotWorld(): RobotSystem {
-    
     const lever1 = new MutableVariable('lever1', true);
     const lever2 = new MutableVariable('lever2', false);
-    const doorA = new DerivedVariable('doorAOpen',
-        [lever1],
-        (state) => !state.get(lever1)
-    );
-    const doorB = new DerivedVariable('doorBOpen',
+    const doorA = new DerivedVariable('doorAOpen', [lever1], (state) => !state.get(lever1));
+    const doorB = new DerivedVariable(
+        'doorBOpen',
         [lever1, lever2],
-        (state) => state.get(lever1) && state.get(lever2)
+        (state) => state.get(lever1) && state.get(lever2),
     );
-    const doorC = new TriggeredVariable('doorCOpen', [
-            doorA,
-        ], (state) => {
+    const doorC = new TriggeredVariable(
+        'doorCOpen',
+        [doorA],
+        (state) => {
             return state.get(doorA);
-        }, false
+        },
+        false,
     );
 
-    const world = new World([
-        lever1, lever2, doorA, doorB, doorC
-    ]);
+    const world = new World([lever1, lever2, doorA, doorB, doorC]);
 
     return {
         lever1,
@@ -39,24 +43,21 @@ function createRobotWorld(): RobotSystem {
         doorA,
         doorB,
         doorC,
-        world
-    }
+        world,
+    };
 }
 
 describe('PartialState', () => {
     it('follows triggers', () => {
-        const {
-            lever1, lever2,
-            doorA, doorB, doorC,
-            world
-        } = createRobotWorld();
+        const { lever1, lever2, doorA, doorB, doorC, world } = createRobotWorld();
         const state = new PartialState(
             world,
             new Map<Variable, boolean>([
                 // Should work with only the lever's state
                 // since the door is derived from it
                 [lever1, false],
-            ]));
+            ]),
+        );
         expect(state.isDefaultContradictory()).toBe(false);
         const consistent = state.findConsistentState();
         expect(consistent).toBeTruthy();
@@ -68,11 +69,7 @@ describe('PartialState', () => {
     });
 
     it('identifies contradictions with triggers', () => {
-        const {
-            lever1, lever2,
-            doorA, doorB, doorC,
-            world
-        } = createRobotWorld();
+        const { lever1, lever2, doorA, doorB, doorC, world } = createRobotWorld();
         const state = new PartialState(
             world,
             new Map<Variable, boolean>([
@@ -80,25 +77,23 @@ describe('PartialState', () => {
                 [lever1, false],
                 // but we say door C is closed, so contradiction
                 [doorC, false],
-            ]));
+            ]),
+        );
         expect(state.isDefaultContradictory()).toBe(true);
         const consistent = state.findConsistentState();
         expect(consistent).toBeFalsy();
     });
 
     it('true triggers do not force state updates', () => {
-        const {
-            lever1, lever2,
-            doorA, doorB, doorC,
-            world
-        } = createRobotWorld();
+        const { lever1, lever2, doorA, doorB, doorC, world } = createRobotWorld();
         const state = new PartialState(
             world,
             new Map<Variable, boolean>([
                 // We know at _some_ point door A was opened, but it
                 // may no longer be, so nothing should be forced
                 [doorC, true],
-            ]));
+            ]),
+        );
         expect(state.isDefaultContradictory()).toBe(false);
         const consistent = state.findConsistentState();
         expect(consistent).toBeTruthy();
@@ -107,18 +102,15 @@ describe('PartialState', () => {
     });
 
     it('updates triggers based on state updates', () => {
-        const {
-            lever1, lever2,
-            doorA, doorB, doorC,
-            world
-        } = createRobotWorld();
+        const { lever1, lever2, doorA, doorB, doorC, world } = createRobotWorld();
         const state = new PartialState(
             world,
             new Map<Variable, boolean>([
                 // Contradicts default value for L1
                 // and should cause door C to open
                 [doorA, true],
-            ]));
+            ]),
+        );
         expect(state.isDefaultContradictory()).toBe(true);
         const consistent = state.findConsistentState();
         expect(consistent).toBeTruthy();
@@ -126,16 +118,11 @@ describe('PartialState', () => {
         expect(concreteState.get(lever1)).toBe(false);
         expect(concreteState.get(doorC)).toBe(true);
     });
-})
+});
 
 describe('Robot world', () => {
-
     it('has a solution', () => {
-        const {
-            lever1, lever2,
-            doorA, doorB, doorC,
-            world: system
-        } = createRobotWorld();
+        const { lever1, lever2, doorA, doorB, doorC, world: system } = createRobotWorld();
         // Just testing all the doors
         // Since there's no time travel here,
         // we can freely observe all state
@@ -157,8 +144,8 @@ describe('Robot world', () => {
         // Which should close door A, without affecting door C
         expect(system.get(doorA)).toBe(false);
         expect(system.get(doorC)).toBe(true);
-        
+
         // Then we can get to the goal
         expect(system.get(doorB)).toBe(true);
     });
-})
+});

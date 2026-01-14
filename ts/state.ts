@@ -10,8 +10,6 @@ export class MutableVariable extends Variable {
     constructor(
         name: string, 
         public readonly defaultValue: boolean,
-        // TODO: Reversible should be dependent on time
-        // (you can get to some levers only in some times)
         public readonly reversible = true,
     ) { 
         super(name);
@@ -119,7 +117,6 @@ export class TriggeredVariable extends Variable implements DependentVariable {
         private readonly dependencies: Variable[],
         private readonly isTriggered: (state: ConcreteState) => boolean,
         /** If false, the triggered variable resets to its default value when traveling back in time */
-        // TODO: Implement!
         public readonly isPersistent: boolean
     ) { 
         super(name);
@@ -608,9 +605,6 @@ type VarState = {
 }
 
 type TriggeringState = {
-    // TODO: I don't think this is needed or possible to accurately track
-    // and the incoming partial state contains that info anyway.
-    unobservedDependencies: Variable[],
     observedDependencies: ConcreteState,
 }
 
@@ -709,14 +703,12 @@ export class TimePeriod {
 
     variableWasTriggered(variable: TriggeredVariable) {
         this.variableWasModified(variable, true);
-        const unobservedDependencies: Variable[] = [];
         const observedDependencies: ConcreteState = new Map();
         for (let [v, vState] of this.varStates.entries()) {
             if (!variable.isDependentOn(v)) continue;
             // If this variable hasn't been modified and we haven't observed its start value,
             // we don't know its value in the antecedent state
             if (!vState.observedStartValue && !vState.couldHaveBeenModifiedAfterStart) {
-                unobservedDependencies.push(v);
                 continue;
             }
             // If we haven't observed this variable since it was modified,
@@ -725,7 +717,6 @@ export class TimePeriod {
             observedDependencies.set(v, vState.lastObservedValue);
         }
         this.antecedents.set(variable, {
-            unobservedDependencies,
             observedDependencies,
         });
     }

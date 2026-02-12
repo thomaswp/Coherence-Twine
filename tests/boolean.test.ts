@@ -1,32 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { DerivedVariable, MutableVariable, PartialState, Variable, World } from '../ts/state';
-
-type BooleanSystem = {
-    lever1: MutableVariable;
-    lever2: MutableVariable;
-    doorC: DerivedVariable;
-    doorB: DerivedVariable;
-    world: World;
-};
-
-function createBooleanWorld(): BooleanSystem {
-    const lever1 = new MutableVariable('lever1', true);
-    const lever2 = new MutableVariable('lever2', false);
-    const doorB = new DerivedVariable('labBOpen', [lever2], (state) => state.get(lever2));
-    const doorC = new DerivedVariable('labCOpen', [lever1, lever2], (state) => {
-        return state.get(lever1) || state.get(lever2);
-    });
-
-    const world = new World([lever1, lever2, doorC, doorB]);
-
-    return {
-        lever1,
-        lever2,
-        doorB,
-        doorC,
-        world,
-    };
-}
+import { createBooleanWorld } from '../ts/level/levels/boolean';
+import { PartialState, Variable } from '../ts/state';
 
 describe('PartialState', () => {
     it('finds consistency', () => {

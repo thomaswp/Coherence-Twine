@@ -33,8 +33,6 @@ function createRobotWorld() {
     };
 }
 
-describe('PartialState', () => {});
-
 describe('Robot Time world', () => {
     it('has a solution', () => {
         const {

@@ -1,10 +1,10 @@
 {
-  "compilerOptions": {
-    "outDir": "./src",
-    "module": "es6",
-    "target": "es2015",
-    "allowJs": true,
-    "moduleResolution": "node",
-    "resolveJsonModule": true
-  }
+    "compilerOptions": {
+        "outDir": "./src",
+        "module": "es6",
+        "target": "es2015",
+        "allowJs": true,
+        "moduleResolution": "node",
+        "resolveJsonModule": true
+    }
 }

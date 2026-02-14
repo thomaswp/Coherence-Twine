@@ -9,7 +9,7 @@
         ]
     },
     "liveServer.settings.ignoreFiles": ["**/*.tw", "**/*.twee", "**/*.js", "**/*.ts"],
-    "cSpell.words": ["ifid"],
+    "cSpell.words": ["ifid", "Interactable", "Interactables"],
     "twee3LanguageTools.passage.list": true,
     "editor.formatOnSave": true,
     "editor.rulers": [100],

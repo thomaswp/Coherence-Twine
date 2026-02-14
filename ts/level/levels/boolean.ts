@@ -45,7 +45,7 @@ export function createLevel() {
     level.connect(labA, labD, Direction.North);
 
     start.isStartingRoom = true;
-    start.entities.push(new TimeTravelBooth());
+    start.entities.push(new TimeTravelBooth([0, -1]));
 
     labA.entities.push(new Toggle(lever1));
 

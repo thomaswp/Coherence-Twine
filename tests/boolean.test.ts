@@ -1,6 +1,11 @@
-import { describe, expect, it } from 'vitest';
+import { assert, describe, expect, it } from 'vitest';
 import { createBooleanWorld } from '../ts/level/levels/boolean';
 import { PartialState, Variable } from '../ts/state';
+
+function expectTruthy<T>(value: T | null | undefined): value is T {
+    expect(value).toBeTruthy();
+    return true;
+}
 
 describe('PartialState', () => {
     it('finds consistency', () => {
@@ -14,7 +19,7 @@ describe('PartialState', () => {
         );
         expect(state.isDefaultContradictory()).toBe(true);
         const consistent = state.findConsistentState();
-        expect(consistent).toBeTruthy();
+        assert.exists(consistent);
         console.log(consistent.inspect());
         expect(consistent.observedValues.get(lever2)).toBe(true);
     });

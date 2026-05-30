@@ -20,7 +20,9 @@ export class DerivedVariable extends Variable implements DependentVariable {
     constructor(
         name: string,
         public readonly dependencies: MutableVariable[],
-        private readonly getValue: (state: ConcreteState) => boolean,
+        // Allow undefined so we don't have to assert each expected variable
+        // exists in the lambda.
+        private readonly getValue: (state: ConcreteState) => boolean | undefined,
     ) {
         super(name);
     }
@@ -30,7 +32,11 @@ export class DerivedVariable extends Variable implements DependentVariable {
     }
 
     deriveValue(state: ConcreteState) {
-        return this.getValue(state);
+        const value = this.getValue(state);
+        if (value === undefined) {
+            throw new Error(`Failed to derive value for variable ${this.name}`);
+        }
+        return value;
     }
 }
 
@@ -144,7 +150,8 @@ function copyMap<Q, P>(map: Map<Q, P>) {
 // Contains values for all variables
 type ConcreteState = Map<Variable, boolean>;
 
-function inspectState(state: ConcreteState) {
+function inspectState(state: ConcreteState | null) {
+    if (!state) return null;
     return new Map([...state.entries()].map(([k, v]) => [k.name, v]));
 }
 
@@ -192,14 +199,26 @@ export class PartialState {
         return null;
     }
 
-    getConcreteValue(variable: Variable): boolean | null {
+    /**
+     * Get a value for a variable in the concrete state represented by this partial state.
+     * This assumes that the concrete state is consistent and will throw an error otherwise.
+     * @param variable
+     * @returns
+     */
+    getConcreteValue(variable: Variable): boolean {
         if (this.observedValues.has(variable)) {
-            return this.observedValues.get(variable);
+            return this.observedValues.get(variable)!;
         }
         // This could be more efficient, but that's not really
         // an issue and I like the consistency of not duplicating
         // the calculation.
-        return this.toConcreteState().get(variable);
+        const concreteState = this.toConcreteState();
+        if (!concreteState) {
+            throw Error(
+                `Cannot get concrete value for ${variable.name} because of a contradiction`,
+            );
+        }
+        return concreteState.get(variable)!;
     }
 
     toConcreteState(): ConcreteState | null {
@@ -305,6 +324,13 @@ export class World {
         return new PartialState(this, observed);
     }
 
+    // We assume the only time our current state can fail to resolve
+    // into a concrete state is when testing time travel.
+    // Otherwise this is a bug and hopefully this will create an error.
+    getConcreteState(): ConcreteState {
+        return this.getPartialState().toConcreteState()!;
+    }
+
     getNextTimePeriod(): TimePeriod | null {
         // Final the minimum time that's greater than the current time
         // or null
@@ -349,14 +375,12 @@ export class World {
     }
 
     private shouldVariableTrigger(updatedVariable: Variable, triggered: TriggeredVariable) {
-        const currentState = this.getPartialState();
         if (
             triggered.isDependentOn(updatedVariable) &&
             // This should only be true if we know it's already been triggered
             !this.currentPeriod.peekValue(triggered)
         ) {
-            const currentState = this.getPartialState();
-            const shouldTrigger = triggered.shouldTrigger(currentState.toConcreteState());
+            const shouldTrigger = triggered.shouldTrigger(this.getConcreteState());
             if (shouldTrigger) {
                 return true;
             }
@@ -377,7 +401,7 @@ export class World {
         });
     }
 
-    peek(variable: Variable) {
+    peek(variable: Variable): boolean {
         // Should only happen for MutableVariables
         const value = this.currentPeriod.peekValue(variable);
         if (value !== undefined) {
@@ -432,7 +456,7 @@ export class World {
             this.timePeriods.set(time, new TimePeriod(this, time));
         }
 
-        const destination = this.timePeriods.get(time);
+        const destination = this.timePeriods.get(time)!;
         if (time < this.currentTime) {
             // We assume here that the caller has already checked to prevent the
             // possibility of creating a contradiction, so we don't check for that.
@@ -507,7 +531,7 @@ export class World {
         if (!dryRun) {
             for (let v of this.variables) {
                 const oldValue = stateToVerify.get(v);
-                const newValue = consistentState.observedValues.get(v);
+                const newValue = consistentState.observedValues.get(v)!;
 
                 if (oldValue !== newValue) {
                     console.log(
@@ -547,13 +571,14 @@ export class World {
             }
 
             // Theoretically we should be able to find a consistent state here...
-            hypotheticalState = hypotheticalState.findConsistentState();
-            if (!hypotheticalState) {
+            const newHypotheticalState = hypotheticalState.findConsistentState();
+            if (!newHypotheticalState) {
                 throw Error(
                     `Internal error: Could not reconcile triggered variable ${triggered.name} \
                     at time ${time}`,
                 );
             }
+            hypotheticalState = newHypotheticalState;
 
             for (const [k, v] of antecedent.observedDependencies.entries()) {
                 // Some values we observed at the time of triggering,
@@ -598,7 +623,7 @@ export class World {
         return consistentState;
     }
 
-    private tryMergeStates(past: ConcreteState, present: ConcreteState): ConcreteState | undefined {
+    private tryMergeStates(past: ConcreteState, present: ConcreteState): ConcreteState | null {
         const state = new Map<Variable, boolean>(past);
         for (let [key, value] of present.entries()) {
             const lastValue = state.get(key);
@@ -619,8 +644,8 @@ type VarState = {
     couldHaveBeenModifiedAfterStart: boolean;
     /** Could this variable have been modified since it's last observation? */
     couldHaveBeenModifiedSinceObserved: boolean;
-    /** Was this variable observed, before any modification, with its starting value. */
-    observedStartValue: boolean;
+    /** The first value observed for this variable, before any modification, with its starting value. */
+    observedStartValue: boolean | undefined;
     // Pretty much always the regular default value unless traveling forward
     // to a previously unseen time period
     /** A fixed starting value for this variable, if known. */
@@ -643,6 +668,10 @@ type TriggeringState = {
 export class TimePeriod {
     private varStates = new Map<Variable, VarState>();
     public readonly antecedents = new Map<TriggeredVariable, TriggeringState>();
+
+    private getState(variable: Variable) {
+        return this.varStates.get(variable)!;
+    }
 
     constructor(
         public readonly world: World,
@@ -682,7 +711,7 @@ export class TimePeriod {
      * a start value.
      */
     overrideStartState(variable: Variable, value: boolean) {
-        const state = this.varStates.get(variable);
+        const state = this.getState(variable);
         if (state.startValue !== undefined) {
             throw Error(
                 `Cannot override start state for ${variable.name} to ${value};\
@@ -710,19 +739,19 @@ export class TimePeriod {
      * Does not return the variable's default value.
      */
     peekValue(variable: Variable): boolean | undefined {
-        const state = this.varStates.get(variable);
+        const state = this.getState(variable);
         return state.currentValue ?? state.startValue;
     }
 
     variableWasObserved(variable: Variable, value: boolean) {
-        const state = this.varStates.get(variable);
+        const state = this.getState(variable);
         if (!state.couldHaveBeenModifiedAfterStart) state.observedStartValue = value;
         state.couldHaveBeenModifiedSinceObserved = false;
         state.lastObservedValue = value;
     }
 
     variableWasModified(modified: MutableVariable | TriggeredVariable, value: boolean) {
-        const state = this.varStates.get(modified);
+        const state = this.getState(modified);
         state.couldHaveBeenModifiedAfterStart = true;
         state.couldHaveBeenModifiedSinceObserved = true;
         state.currentValue = value;
@@ -730,8 +759,8 @@ export class TimePeriod {
         for (let dependent of this.world.variables) {
             if (dependent instanceof DerivedVariable) {
                 if (dependent.isDependentOn(modified)) {
-                    this.varStates.get(dependent).couldHaveBeenModifiedSinceObserved = true;
-                    this.varStates.get(dependent).lastObservedValue = undefined;
+                    this.getState(dependent).couldHaveBeenModifiedSinceObserved = true;
+                    this.getState(dependent).lastObservedValue = undefined;
                     this.updateCouldHaveBeenObserved(dependent);
                 }
             }
@@ -745,7 +774,10 @@ export class TimePeriod {
             if (!variable.isDependentOn(v)) continue;
             // If this variable hasn't been modified and we haven't observed its start value,
             // we don't know its value in the antecedent state
-            if (!vState.observedStartValue && !vState.couldHaveBeenModifiedAfterStart) {
+            if (
+                vState.observedStartValue === undefined &&
+                !vState.couldHaveBeenModifiedAfterStart
+            ) {
                 continue;
             }
             // If we haven't observed this variable since it was modified,
@@ -761,20 +793,20 @@ export class TimePeriod {
     updateCouldHaveBeenObserved(variable: DerivedVariable) {
         let maybeModified = false;
         for (let v of variable.dependencies) {
-            const state = this.varStates.get(v);
+            const state = this.getState(v);
             const defaultValue = state.startValue ?? v.defaultValue;
             if (state.currentValue !== defaultValue) {
                 maybeModified = true;
                 break;
             }
         }
-        this.varStates.get(variable).couldHaveBeenModifiedAfterStart = maybeModified;
+        this.getState(variable).couldHaveBeenModifiedAfterStart = maybeModified;
     }
 
     toPartialConcreteEndState() {
         const state = new Map<Variable, boolean>();
         for (let v of this.world.variables) {
-            const vState = this.varStates.get(v);
+            const vState = this.getState(v);
             const value = vState.currentValue;
             if (value !== undefined && !vState.couldHaveBeenModifiedSinceObserved) {
                 state.set(v, value);
@@ -786,7 +818,7 @@ export class TimePeriod {
     toPartialConcreteStartState() {
         const state = new Map<Variable, boolean>();
         for (let v of this.world.variables) {
-            const vState = this.varStates.get(v);
+            const vState = this.getState(v);
             if (vState.observedStartValue !== undefined) {
                 state.set(v, vState.observedStartValue);
             }

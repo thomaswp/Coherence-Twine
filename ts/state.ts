@@ -116,7 +116,7 @@ export class TriggeredVariable extends Variable implements DependentVariable {
         name: string,
         // Dependencies are mutable or derived
         private readonly dependencies: Variable[],
-        private readonly isTriggered: (state: ConcreteState) => boolean,
+        private readonly isTriggered: (state: ConcreteState) => boolean | undefined,
         /**
          * If false, the triggered variable resets to its default value when
          * traveling back in time
@@ -139,7 +139,7 @@ export class TriggeredVariable extends Variable implements DependentVariable {
     }
 
     shouldTrigger(state: ConcreteState) {
-        return this.isTriggered(state);
+        return this.isTriggered(state)!;
     }
 }
 
@@ -156,12 +156,20 @@ function inspectState(state: ConcreteState | null) {
 }
 
 export class PartialState {
+    protected readonly observedValues: Map<Variable, boolean>;
+
     constructor(
         readonly world: World,
-        readonly observedValues = new Map<Variable, boolean>(),
+        observedValues: Map<Variable, boolean> = new Map(),
         /** If true, triggers must match explicitly */
         public resolveMissingTriggers = false,
-    ) {}
+    ) {
+        this.observedValues = copyMap(observedValues);
+    }
+
+    getObservedValues() {
+        return this.observedValues as ReadonlyMap<Variable, boolean>;
+    }
 
     get mutableVariables() {
         return this.world.mutableVariables;
@@ -181,9 +189,9 @@ export class PartialState {
         return this.toConcreteState() == null;
     }
 
-    findConsistentState(): PartialState | null {
+    findConsistentState(): ConsistentPartialState | null {
         // console.log("Checking for consistency", this.observedValues);
-        if (!this.isDefaultContradictory()) return this;
+        if (!this.isDefaultContradictory()) return this.asConsistent();
 
         const mutableVars = this.mutableVariables.filter((mv) => !this.observedValues.has(mv));
 
@@ -274,9 +282,24 @@ export class PartialState {
         return state;
     }
 
-    copy() {
-        const observed = copyMap(this.observedValues);
-        return new PartialState(this.world, observed, this.resolveMissingTriggers);
+    copy(): PartialState {
+        return new PartialState(this.world, this.observedValues, this.resolveMissingTriggers);
+    }
+
+    asConsistent(): ConsistentPartialState {
+        return new ConsistentPartialState(
+            this.world,
+            this.observedValues,
+            this.resolveMissingTriggers,
+        );
+    }
+
+    asMutable(): MutablePartialState {
+        return new MutablePartialState(
+            this.world,
+            this.observedValues,
+            this.resolveMissingTriggers,
+        );
     }
 
     inspect() {
@@ -287,6 +310,18 @@ export class PartialState {
             observedVariables: inspectState(this.observedValues),
             concreteVariables: inspectState(this.toConcreteState()),
         };
+    }
+}
+
+export class ConsistentPartialState extends PartialState {
+    toConcreteState(): ConcreteState {
+        return super.toConcreteState()!;
+    }
+}
+
+export class MutablePartialState extends PartialState {
+    getObservedValues() {
+        return this.observedValues;
     }
 }
 
@@ -531,7 +566,8 @@ export class World {
         if (!dryRun) {
             for (let v of this.variables) {
                 const oldValue = stateToVerify.get(v);
-                const newValue = consistentState.observedValues.get(v)!;
+                // TODO: Is this guaranteed to be defined?
+                const newValue = consistentState.getObservedValues().get(v)!;
 
                 if (oldValue !== newValue) {
                     console.log(
@@ -558,16 +594,18 @@ export class World {
     ): PartialState | null {
         const time = destination.time;
 
+        let mutableConsistentState = consistentState.asMutable();
+
         for (const [triggered, antecedent] of destination.antecedents.entries()) {
             // Create a hypothetical state at the time of a triggered variable
-            let hypotheticalState = consistentState.copy();
+            let hypotheticalState = consistentState.asMutable();
             for (const v of this.variables) {
                 if (v === triggered) continue;
                 if (triggered.isDependentOn(v)) continue;
                 // Ignore anything that is irrelevant to the triggering
                 // so we don't encounter contradictions from unrelated observations
                 // TODO: This could possible cause some contradictions too...
-                hypotheticalState.observedValues.delete(v);
+                hypotheticalState.getObservedValues().delete(v);
             }
 
             // Theoretically we should be able to find a consistent state here...
@@ -578,14 +616,14 @@ export class World {
                     at time ${time}`,
                 );
             }
-            hypotheticalState = newHypotheticalState;
+            hypotheticalState = newHypotheticalState.asMutable();
 
             for (const [k, v] of antecedent.observedDependencies.entries()) {
                 // Some values we observed at the time of triggering,
                 // so we set them explicitly
-                hypotheticalState.observedValues.set(k, v);
+                hypotheticalState.getObservedValues().set(k, v);
             }
-            hypotheticalState.observedValues.set(triggered, true);
+            hypotheticalState.getObservedValues().set(triggered, true);
             // Important: resolve differences in triggers exactly
             hypotheticalState.resolveMissingTriggers = true;
 
@@ -603,8 +641,8 @@ export class World {
                 return null;
             }
 
-            const originalState = hypotheticalState.observedValues;
-            for (const [k, v] of resolvedState.observedValues.entries()) {
+            const originalState = hypotheticalState.getObservedValues();
+            for (const [k, v] of resolvedState.getObservedValues().entries()) {
                 const existingValue = originalState.get(k);
                 if (existingValue !== v) {
                     console.log(
@@ -613,14 +651,14 @@ export class World {
                     );
                     // Update the consistent state to include this new observation
                     // (Don't use hypotheticalState; it's had values deleted!)
-                    consistentState.observedValues.set(k, v);
+                    mutableConsistentState.getObservedValues().set(k, v);
                 }
             }
         }
 
         // Could theoretically recurse here, but no need unless there
         // are triggers causing other triggers...
-        return consistentState;
+        return mutableConsistentState;
     }
 
     private tryMergeStates(past: ConcreteState, present: ConcreteState): ConcreteState | null {

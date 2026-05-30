@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { assert, describe, expect, it } from 'vitest';
 import {
     DerivedVariable,
     MutableVariable,
@@ -60,7 +60,7 @@ describe('PartialState', () => {
         );
         expect(state.isDefaultContradictory()).toBe(false);
         const consistent = state.findConsistentState();
-        expect(consistent).toBeTruthy();
+        assert.exists(consistent);
         console.log(consistent.inspect());
         const concreteState = consistent.toConcreteState();
         expect(concreteState.get(doorA)).toBe(true);
@@ -96,7 +96,7 @@ describe('PartialState', () => {
         );
         expect(state.isDefaultContradictory()).toBe(false);
         const consistent = state.findConsistentState();
-        expect(consistent).toBeTruthy();
+        assert.exists(consistent);
         const concreteState = consistent.toConcreteState();
         expect(concreteState.get(doorA)).toBe(false);
     });
@@ -113,7 +113,7 @@ describe('PartialState', () => {
         );
         expect(state.isDefaultContradictory()).toBe(true);
         const consistent = state.findConsistentState();
-        expect(consistent).toBeTruthy();
+        assert.exists(consistent);
         const concreteState = consistent.toConcreteState();
         expect(concreteState.get(lever1)).toBe(false);
         expect(concreteState.get(doorC)).toBe(true);

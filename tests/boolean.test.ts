@@ -21,7 +21,7 @@ describe('PartialState', () => {
         const consistent = state.findConsistentState();
         assert.exists(consistent);
         console.log(consistent.inspect());
-        expect(consistent.observedValues.get(lever2)).toBe(true);
+        expect(consistent.getObservedValues().get(lever2)).toBe(true);
     });
 });
 

@@ -115,7 +115,7 @@ export class TriggeredVariable extends Variable implements DependentVariable {
     constructor(
         name: string,
         // Dependencies are mutable or derived
-        private readonly dependencies: Variable[],
+        public readonly dependencies: Variable[],
         private readonly isTriggered: (state: ConcreteState) => boolean | undefined,
         /**
          * If false, the triggered variable resets to its default value when
@@ -363,7 +363,12 @@ export class World {
     // into a concrete state is when testing time travel.
     // Otherwise this is a bug and hopefully this will create an error.
     getConcreteState(): ConcreteState {
-        return this.getPartialState().toConcreteState()!;
+        const partial = this.getPartialState();
+        const state = partial.toConcreteState();
+        if (!state) {
+            throw Error('Current state is contradictory!');
+        }
+        return state;
     }
 
     getNextTimePeriod(): TimePeriod | null {
@@ -666,7 +671,7 @@ export class World {
         for (let [key, value] of present.entries()) {
             const lastValue = state.get(key);
             if (lastValue !== undefined && lastValue !== value) {
-                console.log(`Failed to merge states: ${key} was ${lastValue} now is ${value}`);
+                console.log(`Failed to merge states: ${key.name} was ${lastValue} now is ${value}`);
                 return null;
             }
             state.set(key, value);
@@ -795,11 +800,14 @@ export class TimePeriod {
         state.currentValue = value;
         state.lastObservedValue = value;
         for (let dependent of this.world.variables) {
-            if (dependent instanceof DerivedVariable) {
+            if (dependent instanceof DerivedVariable || dependent instanceof TriggeredVariable) {
                 if (dependent.isDependentOn(modified)) {
                     this.getState(dependent).couldHaveBeenModifiedSinceObserved = true;
                     this.getState(dependent).lastObservedValue = undefined;
-                    this.updateCouldHaveBeenObserved(dependent);
+                    // TODO: This method just updates couldHaveBeenModifiedSinceObserved,
+                    // but we already set that above, and I'm not sure the logic holds, or
+                    // is fully compatible with TriggeredVariables...
+                    // this.updateCouldHaveBeenObserved(dependent);
                 }
             }
         }
@@ -828,7 +836,7 @@ export class TimePeriod {
         });
     }
 
-    updateCouldHaveBeenObserved(variable: DerivedVariable) {
+    private updateCouldHaveBeenObserved(variable: DerivedVariable) {
         let maybeModified = false;
         for (let v of variable.dependencies) {
             const state = this.getState(v);
@@ -848,6 +856,11 @@ export class TimePeriod {
             const value = vState.currentValue;
             if (value !== undefined && !vState.couldHaveBeenModifiedSinceObserved) {
                 state.set(v, value);
+            } else if (
+                !vState.couldHaveBeenModifiedSinceObserved &&
+                vState.lastObservedValue !== undefined
+            ) {
+                state.set(v, vState.lastObservedValue!);
             }
         }
         return state;

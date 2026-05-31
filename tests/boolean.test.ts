@@ -2,11 +2,6 @@ import { assert, describe, expect, it } from 'vitest';
 import { createBooleanWorld } from '../ts/level/levels/boolean';
 import { PartialState, Variable } from '../ts/state';
 
-function expectTruthy<T>(value: T | null | undefined): value is T {
-    expect(value).toBeTruthy();
-    return true;
-}
-
 describe('PartialState', () => {
     it('finds consistency', () => {
         const { lever1, lever2, doorC: doorB, doorB: doorC, world } = createBooleanWorld();
@@ -74,5 +69,23 @@ describe('Boolean World', () => {
         expect(system.travelTo(0)).toBe(false);
         system.set(lever1, true);
         expect(system.travelTo(0)).toBe(true);
+    });
+
+    it('Keeps player in past until contradictions are resolved', () => {
+        const { lever1, lever2, doorC, doorB, world: system } = createBooleanWorld();
+        expect(system.get(doorC)).toBe(true);
+        expect(system.travelTo(-1)).toBe(true);
+        system.set(lever1, false);
+        expect(system.get(doorB)).toBe(false); // Forces L2=Off
+        // Cannot travel to 0, because we've observed that L1=Off, L2=Off
+        // So C cannot be Open
+        expect(system.travelTo(0)).toBe(false);
+        // We have to set L1=On again to be able to travel, which we can do
+        system.set(lever1, true);
+        expect(system.travelTo(0)).toBe(true);
+        // But this shuts us out of a solution
+        expect(system.get(doorB)).toBe(false);
+        // L2 should be forced off in resolution
+        expect(system.peek(lever2)).toBe(false);
     });
 });

@@ -167,6 +167,20 @@ export class PartialState {
         this.observedValues = copyMap(observedValues);
     }
 
+    equals(other: PartialState): boolean {
+        const thisEntries = [...this.observedValues.entries()];
+        const otherEntries = [...other.observedValues.entries()];
+        if (thisEntries.length !== otherEntries.length) {
+            return false;
+        }
+        for (let [key, value] of thisEntries) {
+            if (!other.observedValues.has(key) || other.observedValues.get(key) !== value) {
+                return false;
+            }
+        }
+        return true;
+    }
+
     getObservedValues() {
         return this.observedValues as ReadonlyMap<Variable, boolean>;
     }
@@ -564,9 +578,9 @@ export class World {
             // resolveAntecedents already logs the reason
             return false;
         }
-        // if (!consistentState.equals(consistentStatePreTriggers)) {
-        console.log('Found consistent state after triggers:', consistentState.inspect());
-        // }
+        if (!consistentState.equals(consistentStatePreTriggers)) {
+            console.log('Found consistent state after triggers:', consistentState.inspect());
+        }
 
         if (!dryRun) {
             for (let v of this.variables) {
@@ -807,6 +821,8 @@ export class TimePeriod {
                     // TODO: This method just updates couldHaveBeenModifiedSinceObserved,
                     // but we already set that above, and I'm not sure the logic holds, or
                     // is fully compatible with TriggeredVariables...
+                    // But the above is too permissive; variables aren't always modified just b/c
+                    // a dependency is
                     // this.updateCouldHaveBeenObserved(dependent);
                 }
             }

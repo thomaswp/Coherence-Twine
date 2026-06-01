@@ -1,3 +1,11 @@
+function oneline(strings: TemplateStringsArray, ...values: any[]) {
+    return strings
+        .reduce((result, str, i) => result + str + (i < values.length ? values[i] : ''), '')
+        .split('\n')
+        .map((line) => line.trimStart())
+        .join(' ');
+}
+
 export abstract class Variable {
     constructor(public readonly name: string) {}
 }
@@ -589,17 +597,22 @@ export class World {
                 const newValue = consistentState.getObservedValues().get(v)!;
 
                 if (oldValue !== newValue) {
-                    console.log(
-                        `Overwriting start state for t${periodToModify.time}/${v.name}: \
-                        ${oldValue}->${newValue}`,
-                    );
-                    // Always override the start state of the current period if
-                    // overriding the past, since the past must carry through
-                    // to the future.
+                    // Consider overwriting the start state of the current period if
+                    // overriding the future, since the past must carry through
+                    // to the future. But only if it hasn't been observed and would not create a
+                    // contradiction with the variables that have been observed in the current
+                    // start state.
                     if (periodToModify !== this.currentPeriod) {
-                        this.currentPeriod.overrideStartState(v, newValue);
+                        const currentStartState = this.currentPeriod.toPartialConcreteStartState();
+                        if (!currentStartState.has(v)) {
+                            currentStartState.set(v, newValue);
+                            const partialCurrentStart = new PartialState(this, currentStartState);
+                            if (!partialCurrentStart.isDefaultContradictory()) {
+                                this.currentPeriod.overwriteStartState(v, newValue);
+                            }
+                        }
                     }
-                    periodToModify.overrideStartState(v, newValue);
+                    periodToModify.overwriteStartState(v, newValue);
                 }
             }
         }
@@ -665,7 +678,7 @@ export class World {
                 const existingValue = originalState.get(k);
                 if (existingValue !== v) {
                     console.log(
-                        `Adding override for ${k.name} due to triggered variable ${triggered.name}:\
+                        `Overwriting ${k.name} due to triggered variable ${triggered.name}:\
                         ${existingValue}->${v}`,
                     );
                     // Update the consistent state to include this new observation
@@ -761,26 +774,30 @@ export class TimePeriod {
     //     return this.varStates.get(variable);
     // }
 
-    /** Override the start state of a variable from its original
+    /** Overwrite the start state of a variable from its original
      * default value to resolve a contradiction. This should only
      * be used when resolving a contradiction, meaning that the variable
      * should not have been previously observed, nor have we locked in
      * a start value.
      */
-    overrideStartState(variable: Variable, value: boolean) {
+    overwriteStartState(variable: Variable, value: boolean) {
         const state = this.getState(variable);
         if (state.startValue !== undefined) {
             throw Error(
-                `Cannot override start state for ${variable.name} to ${value};\
+                oneline`Cannot overwrite start state for t${this.time}/${variable.name} to ${value};\
                 it is already set to ${state.startValue}`,
             );
         }
         if (state.currentValue !== undefined && state.currentValue !== value) {
             throw Error(
-                `Cannot override start state for ${variable.name} to ${value};\
+                oneline`Cannot overwrite start state for t${this.time}/${variable.name} to ${value};\
                 it is already observed as ${state.currentValue}`,
             );
         }
+        console.log(
+            oneline`Overwriting start state for t${this.time}/${variable.name}:
+                    ${state.startValue}->${value}`,
+        );
         state.startValue = value;
         // The current value must be the start value because we haven't modified
         state.currentValue = value;

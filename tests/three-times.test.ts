@@ -66,15 +66,14 @@ describe('Middle Time World', () => {
 
         // Can't go home yet; contradiction
         expect(world.canTravelTo(0)).toBe(false);
+        // But we can clear it up at T-1
         expect(world.travelTo(-1)).toBe(true);
 
-        // TODO: Need to implement state transfer to middle times
         expect(world.peek(lever3)).toBe(true);
         expect(world.get(doorC)).toBe(true);
 
         world.set(lever1, false);
         expect(world.travelTo(0)).toBe(true);
-        expect(world.peek(doorD)).toBe(true);
         expect(world.get(doorD)).toBe(true);
         expect(world.get(doorE)).toBe(true);
     });

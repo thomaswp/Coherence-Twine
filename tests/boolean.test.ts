@@ -88,4 +88,17 @@ describe('Boolean World', () => {
         // L2 should be forced off in resolution
         expect(system.peek(lever2)).toBe(false);
     });
+
+    it('supports propagating reconciliations backwards', () => {
+        const { lever1, lever2, doorC, doorB, world: system } = createBooleanWorld();
+        expect(system.get(doorC)).toBe(true);
+        expect(system.travelTo(-1)).toBe(true);
+        system.set(lever1, false);
+        expect(system.travelTo(0)).toBe(true);
+        // expect(system.get(doorB)).toBe(true);
+
+        expect(system.travelTo(-1)).toBe(true);
+        system.set(lever1, true);
+        expect(system.get(doorB)).toBe(true);
+    });
 });

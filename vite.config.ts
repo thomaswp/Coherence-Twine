@@ -1,7 +1,10 @@
-import { defineConfig } from 'vitest/config'
+import { defineConfig } from 'vitest/config';
 
 export default defineConfig({
-  test: {
-    environment: 'node', // or 'jsdom' later if needed
-  },
-})
+    test: {
+        environment: 'node', // or 'jsdom' later if needed
+        chaiConfig: {
+            truncateThreshold: 0, // 0 disables truncation completely
+        },
+    },
+});

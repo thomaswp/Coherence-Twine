@@ -14,7 +14,7 @@ function createWorld(seed: number) {
             new DerivedVariable(
                 `door${i}Open`,
                 [button1, ...randomDoor.variables],
-                (state) => state.get(button1) && randomDoor.getValue(state) === i,
+                (state) => state.get(button1) && randomDoor.peekValue(state) === i,
             ),
     );
 

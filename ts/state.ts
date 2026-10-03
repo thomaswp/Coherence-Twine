@@ -109,11 +109,11 @@ export class NumericVariableProxy implements IVariableProxy {
     }
 
     isInValidState(state: ConcreteState): boolean {
-        const value = this.getValue(state);
+        const value = this.peekValue(state);
         return value >= 0 && value <= this.maxValue;
     }
 
-    getValue(state: ConcreteState): number {
+    peekValue(state: ConcreteState): number {
         let value = 0;
         for (let i = 0; i < this.numBits; i++) {
             if (state.get(this.variables[i])) {
@@ -133,7 +133,7 @@ export class DiscreteVariableProxy implements IVariableProxy {
         public readonly defaultValueIndex: number = 0,
     ) {
         this.variables = values.map(
-            (v, i) => new MutableVariable(`${name}_${v}`, i === defaultValueIndex),
+            (v, i) => new MutableVariable(`${name}_${v}`, i === defaultValueIndex, true),
         );
     }
 
@@ -142,13 +142,48 @@ export class DiscreteVariableProxy implements IVariableProxy {
         return this.variables.reduce((acc, v) => acc + (state.get(v) ? 1 : 0), 0) === 1;
     }
 
-    getValue(state: ConcreteState): string {
+    peekIfValueIs(world: World, value: string): boolean {
+        return this.checkIfValueIs(world, value, 'peek');
+    }
+
+    getIfValueIs(world: World, value: string): boolean {
+        return this.checkIfValueIs(world, value, 'get');
+    }
+
+    private checkIfValueIs(world: World, value: string, method: 'get' | 'peek'): boolean {
+        const getMethod = method === 'get' ? world.get.bind(world) : world.peek.bind(world);
+        const index = this.values.indexOf(value);
+        if (index === -1) {
+            throw new Error(`Value ${value} is not valid for discrete variable ${this.name}`);
+        }
+        const result = getMethod(this.variables[index]);
+        // If we observe that this discrete variable has a specific value
+        // we've inherently observed that it doesn't have any other values.
+        if (result) {
+            for (const v of this.variables) {
+                getMethod(v);
+            }
+        }
+        return result;
+    }
+
+    peekValue(state: ConcreteState): string | undefined {
         for (let i = 0; i < this.variables.length; i++) {
             if (state.get(this.variables[i])) {
                 return this.values[i];
             }
         }
-        throw new Error(`No value set for discrete variable ${this.name}`);
+        return undefined;
+    }
+
+    setValue(world: World, value: string) {
+        const index = this.values.indexOf(value);
+        if (index === -1) {
+            throw new Error(`Value ${value} is not valid for discrete variable ${this.name}`);
+        }
+        for (let i = 0; i < this.variables.length; i++) {
+            world.set(this.variables[i], i === index);
+        }
     }
 }
 
@@ -741,6 +776,8 @@ export class World {
             const lastValue = state.get(key);
             if (lastValue !== undefined && lastValue !== value) {
                 console.log(`Failed to merge states: ${key.name} was ${lastValue} now is ${value}`);
+                console.log(`Past state`, inspectState(past));
+                console.log('Present state', inspectState(present));
                 return null;
             }
             state.set(key, value);

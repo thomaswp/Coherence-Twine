@@ -48,13 +48,18 @@ export class DerivedVariable extends Variable implements DependentVariable {
     }
 }
 
+interface IVariableProxy {
+    readonly variables: readonly MutableVariable[];
+    readonly isInValidState: (state: ConcreteState) => boolean;
+}
+
 /**
  * A proxy for a numeric variable, which is defined as a set of boolean variables
  * representing ranges of values in binary.
  * Includes helper functions for generating the boolean variables and converting
  * their collective state to a numeric value.
  */
-export class NumericVariableProxy {
+export class NumericVariableProxy implements IVariableProxy {
     public readonly variables: readonly MutableVariable[];
     private readonly numBits: number;
 
@@ -116,6 +121,34 @@ export class NumericVariableProxy {
             }
         }
         return value;
+    }
+}
+
+export class DiscreteVariableProxy implements IVariableProxy {
+    public readonly variables: readonly MutableVariable[];
+
+    constructor(
+        public readonly name: string,
+        public readonly values: readonly string[],
+        public readonly defaultValueIndex: number = 0,
+    ) {
+        this.variables = values.map(
+            (v, i) => new MutableVariable(`${name}_${v}`, i === defaultValueIndex),
+        );
+    }
+
+    isInValidState(state: ConcreteState): boolean {
+        // Exactly one of the variables should be true
+        return this.variables.reduce((acc, v) => acc + (state.get(v) ? 1 : 0), 0) === 1;
+    }
+
+    getValue(state: ConcreteState): string {
+        for (let i = 0; i < this.variables.length; i++) {
+            if (state.get(this.variables[i])) {
+                return this.values[i];
+            }
+        }
+        throw new Error(`No value set for discrete variable ${this.name}`);
     }
 }
 
@@ -294,9 +327,9 @@ export class PartialState {
             // or the newly triggered value
             state.set(tv, existingValue ?? shouldTrigger);
         }
-        // Make sure our numeric variables have valid values
+        // Make sure our proxy variables have valid values
         // (i.e. it's not set to a binary combination that exceeds the max)
-        for (const nvp of this.world.numericVariableProxies) {
+        for (const nvp of this.world.proxyVariables) {
             if (!nvp.isInValidState(state)) {
                 return null;
             }
@@ -350,15 +383,24 @@ export class MutablePartialState extends PartialState {
 export class World {
     timePeriods = new Map<number, TimePeriod>();
     currentPeriod: TimePeriod;
+    public readonly variables: readonly Variable[];
     public readonly mutableVariables: readonly MutableVariable[];
     public readonly derivedVariables: readonly DerivedVariable[];
     public readonly triggeredVariables: readonly TriggeredVariable[];
 
     constructor(
-        public readonly variables: Variable[],
-        public readonly numericVariableProxies: NumericVariableProxy[] = [],
+        variables: Variable[],
+        public readonly proxyVariables: IVariableProxy[] = [],
         currentTime: number = 0,
     ) {
+        for (const proxy of proxyVariables) {
+            for (const v of proxy.variables) {
+                if (!variables.includes(v)) {
+                    variables.push(v);
+                }
+            }
+        }
+        this.variables = variables;
         this.currentPeriod = new TimePeriod(this, currentTime);
         this.timePeriods.set(currentTime, this.currentPeriod);
         this.mutableVariables = this.variables.filter(

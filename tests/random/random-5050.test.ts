@@ -34,7 +34,7 @@ function createWorld(seed: number) {
         true,
     );
 
-    const world = new World([button1, ...randomDoor.variables, ...doors, robotGoal], [randomDoor]);
+    const world = new World([button1, ...doors, robotGoal], [randomDoor]);
 
     return {
         button1,

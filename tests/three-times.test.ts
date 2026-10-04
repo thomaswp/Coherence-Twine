@@ -1,32 +1,32 @@
 import { describe, expect, it } from 'vitest';
-import { DerivedVariable, MutableVariable, World } from '../ts/state';
+import { DerivedBoolean, MutableBoolean, World } from '../ts/state';
 
 type MiddleTimeSystem = {
-    lever1: MutableVariable;
-    lever2: MutableVariable;
-    lever3: MutableVariable;
-    doorA: DerivedVariable;
-    doorB: DerivedVariable;
-    doorC: DerivedVariable;
-    doorD: DerivedVariable;
-    doorE: DerivedVariable;
+    lever1: MutableBoolean;
+    lever2: MutableBoolean;
+    lever3: MutableBoolean;
+    doorA: DerivedBoolean;
+    doorB: DerivedBoolean;
+    doorC: DerivedBoolean;
+    doorD: DerivedBoolean;
+    doorE: DerivedBoolean;
     world: World;
 };
 
 export function createMiddleTimeWorld(): MiddleTimeSystem {
-    const lever1 = new MutableVariable('lever1', false);
-    const lever2 = new MutableVariable('lever2', false);
-    const lever3 = new MutableVariable('lever3', false);
+    const lever1 = new MutableBoolean('lever1', false);
+    const lever2 = new MutableBoolean('lever2', false);
+    const lever3 = new MutableBoolean('lever3', false);
 
-    const doorA = new DerivedVariable('doorAOpen', [lever1], (state) => !state.get(lever1));
-    const doorB = new DerivedVariable('doorBOpen', [lever1], (state) => state.get(lever1));
-    const doorC = new DerivedVariable('doorCOpen', [lever3], (state) => state.get(lever3));
-    const doorD = new DerivedVariable(
+    const doorA = new DerivedBoolean('doorAOpen', [lever1], (state) => !state.get(lever1));
+    const doorB = new DerivedBoolean('doorBOpen', [lever1], (state) => state.get(lever1));
+    const doorC = new DerivedBoolean('doorCOpen', [lever3], (state) => state.get(lever3));
+    const doorD = new DerivedBoolean(
         'doorDOpen',
         [lever2, lever3],
         (state) => state.get(lever3) || !state.get(lever2),
     );
-    const doorE = new DerivedVariable('doorEOpen', [lever2], (state) => state.get(lever2));
+    const doorE = new DerivedBoolean('doorEOpen', [lever2], (state) => state.get(lever2));
 
     const world = new World([lever1, lever2, lever3, doorA, doorB, doorC, doorD, doorE]);
 

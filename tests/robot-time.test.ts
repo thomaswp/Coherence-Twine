@@ -1,18 +1,18 @@
 import { describe, expect, it } from 'vitest';
-import { DerivedVariable, MutableVariable, TriggeredVariable, World } from '../ts/state';
+import { DerivedBoolean, MutableBoolean, TriggeredBoolean, World } from '../ts/state';
 
 function createRobotWorld() {
-    const lever1 = new MutableVariable('lever1', false);
-    const lever2 = new MutableVariable('lever2', true);
-    const doorA = new MutableVariable('doorAOpen', false);
+    const lever1 = new MutableBoolean('lever1', false);
+    const lever2 = new MutableBoolean('lever2', true);
+    const doorA = new MutableBoolean('doorAOpen', false);
 
-    const doorB = new DerivedVariable('doorBOpen', [lever2], (state) => state.get(lever2));
-    const doorC = new DerivedVariable('doorCOpen', [lever1], (state) => state.get(lever1));
+    const doorB = new DerivedBoolean('doorBOpen', [lever2], (state) => state.get(lever2));
+    const doorC = new DerivedBoolean('doorCOpen', [lever1], (state) => state.get(lever1));
     // const doorD = new DerivedVariable('doorDOpen',
     //     [lever1],
     //     (state) => state.get(lever1)
     // );
-    const robotGoal = new TriggeredVariable(
+    const robotGoal = new TriggeredBoolean(
         'robotAtGoal',
         [doorA, doorB, doorC],
         (state) => {

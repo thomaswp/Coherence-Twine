@@ -1,4 +1,4 @@
-import { MutableVariable, Variable, World } from '../state';
+import { MutableBoolean, Variable, World } from '../state';
 
 export class Room {
     readonly connections: Connection[] = [];
@@ -40,7 +40,7 @@ export interface IInteractable extends IEntity {
 }
 
 export class Toggle implements IInteractable {
-    constructor(public variable: MutableVariable) {}
+    constructor(public variable: MutableBoolean) {}
 
     getName(): string {
         return `Toggle ${this.variable.name}`;

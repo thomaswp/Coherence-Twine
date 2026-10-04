@@ -1,32 +1,32 @@
 import { assert, describe, expect, it } from 'vitest';
 import {
     ConcreteState,
-    DerivedVariable,
-    MutableVariable,
+    DerivedBoolean,
+    MutableBoolean,
     PartialState,
-    TriggeredVariable,
+    TriggeredBoolean,
     World,
 } from '../ts/state';
 
 type RobotSystem = {
-    lever1: MutableVariable;
-    lever2: MutableVariable;
-    doorA: DerivedVariable;
-    doorB: DerivedVariable;
-    doorC: TriggeredVariable;
+    lever1: MutableBoolean;
+    lever2: MutableBoolean;
+    doorA: DerivedBoolean;
+    doorB: DerivedBoolean;
+    doorC: TriggeredBoolean;
     world: World;
 };
 
 function createRobotWorld(): RobotSystem {
-    const lever1 = new MutableVariable('lever1', true);
-    const lever2 = new MutableVariable('lever2', false);
-    const doorA = new DerivedVariable('doorAOpen', [lever1], (state) => !state.get(lever1));
-    const doorB = new DerivedVariable(
+    const lever1 = new MutableBoolean('lever1', true);
+    const lever2 = new MutableBoolean('lever2', false);
+    const doorA = new DerivedBoolean('doorAOpen', [lever1], (state) => !state.get(lever1));
+    const doorB = new DerivedBoolean(
         'doorBOpen',
         [lever1, lever2],
         (state) => state.get(lever1) && state.get(lever2),
     );
-    const doorC = new TriggeredVariable(
+    const doorC = new TriggeredBoolean(
         'doorCOpen',
         [doorA],
         (state) => {

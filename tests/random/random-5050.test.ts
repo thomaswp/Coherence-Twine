@@ -1,9 +1,9 @@
 import { assert, describe, expect, it } from 'vitest';
 import {
-    DerivedVariable,
-    MutableVariable,
+    DerivedBoolean,
+    MutableBoolean,
     NumericVariableProxy,
-    TriggeredVariable,
+    TriggeredBoolean,
     World,
 } from '../../ts/state';
 
@@ -12,14 +12,14 @@ function createWorld(seed: number) {
 
     assert(seed >= 0 && seed < nValues, `Seed must be between 0 and ${nValues - 1}`);
 
-    const button1 = new MutableVariable('button1', false, true);
+    const button1 = new MutableBoolean('button1', false, true);
 
     const randomDoor = new NumericVariableProxy('randomDoor', seed, nValues - 1);
 
     const doors = Array.from(
         { length: nValues },
         (_, i) =>
-            new DerivedVariable(
+            new DerivedBoolean(
                 `door${i}Open`,
                 [button1, ...randomDoor.variables],
                 (state) => state.get(button1) && randomDoor.peekValue(state) === i,
@@ -27,7 +27,7 @@ function createWorld(seed: number) {
     );
     const [doorA, doorB, doorC] = doors;
 
-    const robotGoal = new TriggeredVariable(
+    const robotGoal = new TriggeredBoolean(
         'robotAtGoal',
         [button1, doorA, doorB],
         (state) => state.get(button1) && (state.get(doorA) || state.get(doorB)),

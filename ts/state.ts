@@ -17,7 +17,6 @@ export abstract class Variable<T> implements IVariable {
     constructor(public readonly name: string) {}
 }
 
-// TODO: Rename
 abstract class MutableVariableBase<T> extends Variable<T> {
     constructor(
         name: string,
@@ -34,13 +33,13 @@ abstract class MutableVariableBase<T> extends Variable<T> {
     abstract possibleStates(): T[];
 }
 
-export class MutableVariable extends MutableVariableBase<boolean> {
+export class MutableBoolean extends MutableVariableBase<boolean> {
     possibleStates(): boolean[] {
         return [true, false];
     }
 }
 
-export class NominalVariable extends MutableVariableBase<string> {
+export class MutableNominal extends MutableVariableBase<string> {
     constructor(
         name: string,
         public readonly possibleValues: string[],
@@ -58,7 +57,7 @@ interface DependentVariable {
     isDependentOn(variable: IVariable): boolean;
 }
 
-export class DerivedVariable extends Variable<boolean> implements DependentVariable {
+export class DerivedBoolean extends Variable<boolean> implements DependentVariable {
     constructor(
         name: string,
         public readonly dependencies: IVariable[],
@@ -83,7 +82,7 @@ export class DerivedVariable extends Variable<boolean> implements DependentVaria
 }
 
 interface IVariableProxy {
-    readonly variables: readonly MutableVariable[];
+    readonly variables: readonly MutableBoolean[];
     readonly isInValidState: (state: ConcreteState) => boolean;
 }
 
@@ -94,7 +93,7 @@ interface IVariableProxy {
  * their collective state to a numeric value.
  */
 export class NumericVariableProxy implements IVariableProxy {
-    public readonly variables: readonly MutableVariable[];
+    public readonly variables: readonly MutableBoolean[];
     private readonly numBits: number;
 
     constructor(
@@ -107,7 +106,7 @@ export class NumericVariableProxy implements IVariableProxy {
         const startingBits = this.toBooleanArray(startingValue);
         for (let i = 0; i < this.numBits; i++) {
             booleanVariables.push(
-                new MutableVariable(`${this.name}_bit${i}`, startingBits[i] || false),
+                new MutableBoolean(`${this.name}_bit${i}`, startingBits[i] || false),
             );
         }
         this.variables = booleanVariables;
@@ -158,7 +157,7 @@ export class NumericVariableProxy implements IVariableProxy {
     }
 }
 
-export class TriggeredVariable extends Variable<boolean> implements DependentVariable {
+export class TriggeredBoolean extends Variable<boolean> implements DependentVariable {
     constructor(
         name: string,
         // Dependencies are mutable or derived
@@ -176,7 +175,7 @@ export class TriggeredVariable extends Variable<boolean> implements DependentVar
     isDependentOn(variable: IVariable): boolean {
         for (let dep of this.dependencies) {
             if (dep === variable) return true;
-            if (dep instanceof DerivedVariable || dep instanceof TriggeredVariable) {
+            if (dep instanceof DerivedBoolean || dep instanceof TriggeredBoolean) {
                 if (dep.isDependentOn(variable)) {
                     return true;
                 }
@@ -433,8 +432,8 @@ export class World {
     currentPeriod: TimePeriod;
     public readonly variables: readonly IVariable[];
     public readonly mutableVariables: readonly MutableVariableBase<any>[];
-    public readonly derivedVariables: readonly DerivedVariable[];
-    public readonly triggeredVariables: readonly TriggeredVariable[];
+    public readonly derivedVariables: readonly DerivedBoolean[];
+    public readonly triggeredVariables: readonly TriggeredBoolean[];
 
     constructor(
         variables: IVariable[],
@@ -455,11 +454,11 @@ export class World {
             (v) => v instanceof MutableVariableBase,
         ) as MutableVariableBase<any>[];
         this.derivedVariables = this.variables.filter(
-            (v) => v instanceof DerivedVariable,
-        ) as DerivedVariable[];
+            (v) => v instanceof DerivedBoolean,
+        ) as DerivedBoolean[];
         this.triggeredVariables = this.variables.filter(
-            (v) => v instanceof TriggeredVariable,
-        ) as TriggeredVariable[];
+            (v) => v instanceof TriggeredBoolean,
+        ) as TriggeredBoolean[];
     }
 
     get currentTime() {
@@ -526,7 +525,7 @@ export class World {
         this.checkForTriggeredVariables(variable);
     }
 
-    private shouldVariableTrigger(updatedVariable: IVariable, triggered: TriggeredVariable) {
+    private shouldVariableTrigger(updatedVariable: IVariable, triggered: TriggeredBoolean) {
         if (
             triggered.isDependentOn(updatedVariable) &&
             // This should only be true if we know it's already been triggered
@@ -836,7 +835,7 @@ type TriggeringState = {
 
 export class TimePeriod {
     private varStates = new Map<IVariable, VarState<any>>();
-    public readonly antecedents = new Map<TriggeredVariable, TriggeringState>();
+    public readonly antecedents = new Map<TriggeredBoolean, TriggeringState>();
 
     private getState(variable: IVariable) {
         return this.varStates.get(variable)!;
@@ -923,14 +922,14 @@ export class TimePeriod {
         state.lastObservedValue = value;
     }
 
-    variableWasModified<T>(modified: MutableVariableBase<T> | TriggeredVariable, value: T) {
+    variableWasModified<T>(modified: MutableVariableBase<T> | TriggeredBoolean, value: T) {
         const state = this.getState(modified);
         state.couldHaveBeenModifiedAfterStart = true;
         state.couldHaveBeenModifiedSinceObserved = true;
         state.currentValue = value;
         state.lastObservedValue = value;
         for (let dependent of this.world.variables) {
-            if (dependent instanceof DerivedVariable || dependent instanceof TriggeredVariable) {
+            if (dependent instanceof DerivedBoolean || dependent instanceof TriggeredBoolean) {
                 if (dependent.isDependentOn(modified)) {
                     this.getState(dependent).couldHaveBeenModifiedSinceObserved = true;
                     this.getState(dependent).lastObservedValue = undefined;
@@ -945,7 +944,7 @@ export class TimePeriod {
         }
     }
 
-    variableWasTriggered(variable: TriggeredVariable) {
+    variableWasTriggered(variable: TriggeredBoolean) {
         this.variableWasModified(variable, true);
         const observedDependencies: ConcreteState = new ConcreteState();
         for (let [v, vState] of this.varStates.entries()) {

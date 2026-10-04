@@ -1,19 +1,19 @@
-import { DerivedVariable, MutableVariable, World } from '../../state';
+import { DerivedBoolean, MutableBoolean, World } from '../../state';
 import { Direction, Level, Room, TimeTravelBooth, Toggle } from '../Level';
 
 type BooleanSystem = {
-    lever1: MutableVariable;
-    lever2: MutableVariable;
-    doorC: DerivedVariable;
-    doorB: DerivedVariable;
+    lever1: MutableBoolean;
+    lever2: MutableBoolean;
+    doorC: DerivedBoolean;
+    doorB: DerivedBoolean;
     world: World;
 };
 
 export function createBooleanWorld(): BooleanSystem {
-    const lever1 = new MutableVariable('lever1', true);
-    const lever2 = new MutableVariable('lever2', false);
-    const doorB = new DerivedVariable('labBOpen', [lever2], (state) => state.get(lever2));
-    const doorC = new DerivedVariable('labCOpen', [lever1, lever2], (state) => {
+    const lever1 = new MutableBoolean('lever1', true);
+    const lever2 = new MutableBoolean('lever2', false);
+    const doorB = new DerivedBoolean('labBOpen', [lever2], (state) => state.get(lever2));
+    const doorC = new DerivedBoolean('labCOpen', [lever1, lever2], (state) => {
         return state.get(lever1) || state.get(lever2);
     });
 

@@ -1,17 +1,17 @@
 import { assert, describe, expect, it } from 'vitest';
-import { DerivedVariable, MutableVariable, NumericVariableProxy, World } from '../../ts/state';
+import { DerivedBoolean, MutableBoolean, NumericVariableProxy, World } from '../../ts/state';
 
 function createWorld(seed: number) {
     assert(seed >= 0 && seed < 4, 'Seed must be between 0 and 3');
 
-    const button1 = new MutableVariable('button1', false, true);
+    const button1 = new MutableBoolean('button1', false, true);
 
     const randomDoor = new NumericVariableProxy('randomDoor', seed, 3);
 
     const doors = Array.from(
         { length: 4 },
         (_, i) =>
-            new DerivedVariable(
+            new DerivedBoolean(
                 `door${i}Open`,
                 [button1, ...randomDoor.variables],
                 (state) => state.get(button1) && randomDoor.peekValue(state) === i,

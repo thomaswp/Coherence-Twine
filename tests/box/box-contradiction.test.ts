@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { DerivedVariable, MutableVariable, NominalVariable, World } from '../../ts/state';
+import { DerivedBoolean, MutableBoolean, MutableNominal, World } from '../../ts/state';
 
 enum BoxLocations {
     BoxRoom = 'BoxRoom',
@@ -12,18 +12,18 @@ enum BoxLocations {
 function createWorld() {
     const boxLocationValues = Object.values(BoxLocations);
 
-    const box1 = new NominalVariable('box1', boxLocationValues, BoxLocations.BoxRoom);
-    const box2 = new NominalVariable('box2', boxLocationValues, BoxLocations.TravelRoom);
+    const box1 = new MutableNominal('box1', boxLocationValues, BoxLocations.BoxRoom);
+    const box2 = new MutableNominal('box2', boxLocationValues, BoxLocations.TravelRoom);
 
-    const lever1 = new MutableVariable('lever1', false, true);
+    const lever1 = new MutableBoolean('lever1', false, true);
 
-    const doorA = new DerivedVariable('doorA', [lever1], (state) => state.get(lever1));
-    const doorB = new DerivedVariable(
+    const doorA = new DerivedBoolean('doorA', [lever1], (state) => state.get(lever1));
+    const doorB = new DerivedBoolean(
         'doorB',
         [box1, box2],
         (state) => state.get(box1) === BoxLocations.DoorB || state.get(box2) === BoxLocations.DoorB,
     );
-    const doorC = new DerivedVariable(
+    const doorC = new DerivedBoolean(
         'doorC',
         [box1, box2],
         (state) => state.get(box1) === BoxLocations.DoorC || state.get(box2) === BoxLocations.DoorC,

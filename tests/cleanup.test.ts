@@ -1,25 +1,25 @@
 import { describe, expect, it } from 'vitest';
-import { ConcreteState, DerivedVariable, MutableVariable, PartialState, World } from '../ts/state';
+import { ConcreteState, DerivedBoolean, MutableBoolean, PartialState, World } from '../ts/state';
 
 type CleanUpSystem = {
-    lever1: MutableVariable;
-    lever2: MutableVariable;
-    doorA: DerivedVariable;
-    doorB: DerivedVariable;
-    doorC: DerivedVariable;
+    lever1: MutableBoolean;
+    lever2: MutableBoolean;
+    doorA: DerivedBoolean;
+    doorB: DerivedBoolean;
+    doorC: DerivedBoolean;
     world: World;
 };
 
 function createWorld(): CleanUpSystem {
-    const lever1 = new MutableVariable('lever1', true);
-    const lever2 = new MutableVariable('lever2', false);
-    const doorA = new DerivedVariable('doorAOpen', [lever1], (state) => {
+    const lever1 = new MutableBoolean('lever1', true);
+    const lever2 = new MutableBoolean('lever2', false);
+    const doorA = new DerivedBoolean('doorAOpen', [lever1], (state) => {
         return state.get(lever1);
     });
-    const doorB = new DerivedVariable('doorBOpen', [lever1, lever2], (state) => {
+    const doorB = new DerivedBoolean('doorBOpen', [lever1, lever2], (state) => {
         return !state.get(lever1) && !state.get(lever2);
     });
-    const doorC = new DerivedVariable('doorCOpen', [lever2], (state) => state.get(lever2));
+    const doorC = new DerivedBoolean('doorCOpen', [lever2], (state) => state.get(lever2));
 
     const world = new World([lever1, lever2, doorA, doorB, doorC]);
 

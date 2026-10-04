@@ -198,7 +198,7 @@ export class ConcreteState extends ReadonlyConcreteState {
     }
 }
 
-function inspectState(state: ConcreteState | null) {
+export function inspectState(state: ConcreteState | null) {
     if (!state) return null;
     return new Map([...state.entries()].map(([k, v]) => [k.name, v]));
 }
@@ -864,7 +864,9 @@ export class TimePeriod {
 
     variableWasObserved<T>(variable: Variable<T>, value: T) {
         const state = this.getState(variable);
-        if (!state.couldHaveBeenModifiedAfterStart) state.observedStartValue = value;
+        if (!state.couldHaveBeenModifiedAfterStart && state.observedStartValue === undefined) {
+            state.observedStartValue = value;
+        }
         state.couldHaveBeenModifiedSinceObserved = false;
         state.lastObservedValue = value;
     }
@@ -879,6 +881,7 @@ export class TimePeriod {
             if (dependent instanceof DerivedBoolean || dependent instanceof TriggeredBoolean) {
                 if (dependent.isDependentOn(modified)) {
                     this.getState(dependent).couldHaveBeenModifiedSinceObserved = true;
+                    this.getState(dependent).couldHaveBeenModifiedAfterStart = true;
                     this.getState(dependent).lastObservedValue = undefined;
                     // TODO: This method just updates couldHaveBeenModifiedSinceObserved,
                     // but we already set that above, and I'm not sure the logic holds, or

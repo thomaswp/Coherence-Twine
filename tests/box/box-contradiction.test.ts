@@ -73,10 +73,6 @@ describe('Box Contradiction World', () => {
         expect(world.canTravelTo(0)).toBe(false);
         world.set(box2, BoxLocations.TravelRoom);
         // Now both boxes are back in their original locations, so we can travel forward
-
-        // TODO: For some reason the T0 start state has
-        // doorB open, which shouldn't be the case, even if I explicitly
-        // observe it as closed at the start.
         expect(world.travelTo(0)).toBe(true);
 
         // Now we can go through the door to the goal

@@ -39,6 +39,47 @@ export class MutableBoolean extends MutableVariableBase<boolean> {
     }
 }
 
+export class MutableNumeric extends MutableVariableBase<number> {
+    private readonly possibleStatesArray: number[];
+
+    constructor(
+        name: string,
+        defaultValue: number,
+        public readonly maxValue: number,
+    ) {
+        super(name, defaultValue);
+        this.possibleStatesArray = [];
+        for (let i = 0; i <= this.maxValue; i++) {
+            this.possibleStatesArray.push(i);
+        }
+    }
+
+    possibleStates(): number[] {
+        return this.possibleStatesArray;
+    }
+
+    public static fromProbabilityDistribution(
+        name: string,
+        probabilities: number[],
+    ): MutableNumeric {
+        const total = probabilities.reduce((a, b) => a + b, 0);
+        if (total <= 0) {
+            throw Error('Total probability must be greater than zero');
+        }
+        const normalized = probabilities.map((p) => p / total);
+        let cumulative = 0;
+        const rand = Math.random();
+        for (let i = 0; i < normalized.length; i++) {
+            cumulative += normalized[i];
+            if (rand <= cumulative) {
+                return new MutableNumeric(name, normalized.length - 1, i);
+            }
+        }
+        // Fallback in case of rounding errors
+        return new MutableNumeric(name, normalized.length - 1, normalized.length - 1);
+    }
+}
+
 export class MutableNominal extends MutableVariableBase<string> {
     constructor(
         name: string,
@@ -76,82 +117,6 @@ export class DerivedBoolean extends Variable<boolean> implements DependentVariab
         const value = this.getValue(state);
         if (value === undefined) {
             throw new Error(`Failed to derive value for variable ${this.name}`);
-        }
-        return value;
-    }
-}
-
-interface IVariableProxy {
-    readonly variables: readonly MutableBoolean[];
-    readonly isInValidState: (state: ConcreteState) => boolean;
-}
-
-/**
- * A proxy for a numeric variable, which is defined as a set of boolean variables
- * representing ranges of values in binary.
- * Includes helper functions for generating the boolean variables and converting
- * their collective state to a numeric value.
- */
-export class NumericVariableProxy implements IVariableProxy {
-    public readonly variables: readonly MutableBoolean[];
-    private readonly numBits: number;
-
-    constructor(
-        public readonly name: string,
-        startingValue: number,
-        public readonly maxValue: number,
-    ) {
-        this.numBits = Math.ceil(Math.log2(this.maxValue + 1));
-        const booleanVariables = [];
-        const startingBits = this.toBooleanArray(startingValue);
-        for (let i = 0; i < this.numBits; i++) {
-            booleanVariables.push(
-                new MutableBoolean(`${this.name}_bit${i}`, startingBits[i] || false),
-            );
-        }
-        this.variables = booleanVariables;
-    }
-
-    public static fromProbabilityDistribution(
-        name: string,
-        probabilities: number[],
-    ): NumericVariableProxy {
-        const total = probabilities.reduce((a, b) => a + b, 0);
-        if (total <= 0) {
-            throw Error('Total probability must be greater than zero');
-        }
-        const normalized = probabilities.map((p) => p / total);
-        let cumulative = 0;
-        const rand = Math.random();
-        for (let i = 0; i < normalized.length; i++) {
-            cumulative += normalized[i];
-            if (rand <= cumulative) {
-                return new NumericVariableProxy(name, normalized.length - 1, i);
-            }
-        }
-        // Fallback in case of rounding errors
-        return new NumericVariableProxy(name, normalized.length - 1, normalized.length - 1);
-    }
-
-    private toBooleanArray(value: number): boolean[] {
-        const bits: boolean[] = [];
-        for (let i = 0; i < this.numBits; i++) {
-            bits.push((value & (1 << i)) !== 0);
-        }
-        return bits;
-    }
-
-    isInValidState(state: ConcreteState): boolean {
-        const value = this.peekValue(state);
-        return value >= 0 && value <= this.maxValue;
-    }
-
-    peekValue(state: ConcreteState): number {
-        let value = 0;
-        for (let i = 0; i < this.numBits; i++) {
-            if (state.get(this.variables[i])) {
-                value += 1 << i;
-            }
         }
         return value;
     }
@@ -374,13 +339,6 @@ export class PartialState {
             // or the newly triggered value
             state.set(tv, existingValue ?? shouldTrigger);
         }
-        // Make sure our proxy variables have valid values
-        // (i.e. it's not set to a binary combination that exceeds the max)
-        for (const nvp of this.world.proxyVariables) {
-            if (!nvp.isInValidState(state)) {
-                return null;
-            }
-        }
         return state;
     }
 
@@ -435,18 +393,7 @@ export class World {
     public readonly derivedVariables: readonly DerivedBoolean[];
     public readonly triggeredVariables: readonly TriggeredBoolean[];
 
-    constructor(
-        variables: IVariable[],
-        public readonly proxyVariables: IVariableProxy[] = [],
-        currentTime: number = 0,
-    ) {
-        for (const proxy of proxyVariables) {
-            for (const v of proxy.variables) {
-                if (!variables.includes(v)) {
-                    variables.push(v);
-                }
-            }
-        }
+    constructor(variables: IVariable[], currentTime: number = 0) {
         this.variables = variables;
         this.currentPeriod = new TimePeriod(this, currentTime);
         this.timePeriods.set(currentTime, this.currentPeriod);

@@ -2,7 +2,7 @@ import { assert, describe, expect, it } from 'vitest';
 import {
     DerivedBoolean,
     MutableBoolean,
-    NumericVariableProxy,
+    MutableNumeric,
     TriggeredBoolean,
     World,
 } from '../../ts/state';
@@ -14,15 +14,15 @@ function createWorld(seed: number) {
 
     const button1 = new MutableBoolean('button1', false, true);
 
-    const randomDoor = new NumericVariableProxy('randomDoor', seed, nValues - 1);
+    const randomDoor = new MutableNumeric('randomDoor', seed, nValues - 1);
 
     const doors = Array.from(
         { length: nValues },
         (_, i) =>
             new DerivedBoolean(
                 `door${i}Open`,
-                [button1, ...randomDoor.variables],
-                (state) => state.get(button1) && randomDoor.peekValue(state) === i,
+                [button1, randomDoor],
+                (state) => state.get(button1) && state.get(randomDoor) === i,
             ),
     );
     const [doorA, doorB, doorC] = doors;
@@ -34,7 +34,7 @@ function createWorld(seed: number) {
         true,
     );
 
-    const world = new World([button1, ...doors, robotGoal], [randomDoor]);
+    const world = new World([button1, randomDoor, ...doors, robotGoal]);
 
     return {
         button1,

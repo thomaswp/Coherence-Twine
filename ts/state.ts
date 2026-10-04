@@ -10,6 +10,19 @@ interface IVariable {
     readonly name: string;
 }
 
+// In the future, we might want to define variables for non-primitives
+// and need to support an equality function
+function eq(a: any, b: any): boolean {
+    if (a === b) return true;
+    if (typeof a !== typeof b) return false;
+    if (a.equals) return a.equals(b);
+    return false;
+}
+
+function neq(a: any, b: any): boolean {
+    return !eq(a, b);
+}
+
 export abstract class Variable<T> implements IVariable {
     // Use the generic parameter so it can be recognized by the TS compiler
     declare readonly _type?: T;
@@ -222,7 +235,7 @@ export class PartialState {
             return false;
         }
         for (let [key, value] of thisEntries) {
-            if (!other.observedValues.has(key) || other.observedValues.get(key) !== value) {
+            if (!other.observedValues.has(key) || neq(other.observedValues.get(key), value)) {
                 return false;
             }
         }
@@ -264,7 +277,7 @@ export class PartialState {
             for (const value of mv.possibleStates()) {
                 // No point in checking the default value, since we
                 // already know that doesn't work
-                if (value === mv.defaultValue) continue;
+                if (eq(value, mv.defaultValue)) continue;
                 state.observedValues.set(mv, value);
                 // console.log(`Altering ${mv.name} -> ${!mv.defaultValue}`);
                 const ps = state.findConsistentState();
@@ -299,7 +312,7 @@ export class PartialState {
     toConcreteState(): ConcreteState | null {
         // Start with observations
         const state = this.observedValues.copy();
-        // The add default values for
+        // Then add default values for
         for (const mv of this.mutableVariables) {
             if (!state.has(mv)) {
                 state.set(mv, mv.defaultValue);
@@ -308,7 +321,7 @@ export class PartialState {
         for (const dv of this.derivedVariables) {
             const value = dv.deriveValue(state);
             const existingValue = state.get(dv);
-            if (existingValue !== undefined && existingValue !== value) {
+            if (existingValue !== undefined && neq(existingValue, value)) {
                 // Could return the actual contradiction
                 return null;
             }
@@ -639,7 +652,7 @@ export class World {
                 // TODO: Is this guaranteed to be defined?
                 const newValue = consistentState.getObservedValues().get(v)!;
 
-                if (oldValue !== newValue) {
+                if (neq(oldValue, newValue)) {
                     // Consider overwriting the start state of the current period if
                     // overriding the future, since the past must carry through
                     // to the future. But only if it hasn't been observed and would not create a
@@ -719,7 +732,7 @@ export class World {
             const originalState = hypotheticalState.getObservedValues();
             for (const [k, v] of resolvedState.getObservedValues().entries()) {
                 const existingValue = originalState.get(k);
-                if (existingValue !== v) {
+                if (neq(existingValue, v)) {
                     console.log(
                         `Overwriting ${k.name} due to triggered variable ${triggered.name}:\
                         ${existingValue}->${v}`,
@@ -740,7 +753,7 @@ export class World {
         const state = past.copy();
         for (let [key, value] of present.entries()) {
             const lastValue = state.get(key);
-            if (lastValue !== undefined && lastValue !== value) {
+            if (lastValue !== undefined && neq(lastValue, value)) {
                 console.log(`Failed to merge states: ${key.name} was ${lastValue} now is ${value}`);
                 console.log(`Past state`, inspectState(past));
                 console.log('Present state', inspectState(present));
@@ -833,7 +846,7 @@ export class TimePeriod {
                 it is already set to ${state.startValue}`,
             );
         }
-        if (state.currentValue !== undefined && state.currentValue !== value) {
+        if (state.currentValue !== undefined && neq(state.currentValue, value)) {
             throw Error(
                 oneline`Cannot overwrite start state for t${this.time}/${variable.name} to ${value};\
                 it is already observed as ${state.currentValue}`,

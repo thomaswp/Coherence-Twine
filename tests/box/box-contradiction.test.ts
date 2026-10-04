@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { DerivedVariable, DiscreteVariableProxy, MutableVariable, World } from '../../ts/state';
+import { DerivedVariable, MutableVariable, NominalVariable, World } from '../../ts/state';
 
 enum BoxLocations {
     BoxRoom = 'BoxRoom',
@@ -12,28 +12,24 @@ enum BoxLocations {
 function createWorld() {
     const boxLocationValues = Object.values(BoxLocations);
 
-    const box1 = new DiscreteVariableProxy('box1', boxLocationValues, 0);
-    const box2 = new DiscreteVariableProxy('box2', boxLocationValues, 1);
+    const box1 = new NominalVariable('box1', boxLocationValues, BoxLocations.BoxRoom);
+    const box2 = new NominalVariable('box2', boxLocationValues, BoxLocations.TravelRoom);
 
     const lever1 = new MutableVariable('lever1', false, true);
 
     const doorA = new DerivedVariable('doorA', [lever1], (state) => state.get(lever1));
     const doorB = new DerivedVariable(
         'doorB',
-        [...box1.variables],
-        (state) =>
-            box1.peekValue(state) === BoxLocations.DoorB ||
-            box2.peekValue(state) === BoxLocations.DoorB,
+        [box1, box2],
+        (state) => state.get(box1) === BoxLocations.DoorB || state.get(box2) === BoxLocations.DoorB,
     );
     const doorC = new DerivedVariable(
         'doorC',
-        [...box1.variables],
-        (state) =>
-            box1.peekValue(state) === BoxLocations.DoorC ||
-            box2.peekValue(state) === BoxLocations.DoorC,
+        [box1, box2],
+        (state) => state.get(box1) === BoxLocations.DoorC || state.get(box2) === BoxLocations.DoorC,
     );
 
-    const world = new World([lever1, doorA, doorB, doorC], [box1, box2]);
+    const world = new World([lever1, doorA, doorB, doorC, box1, box2]);
 
     return {
         box1,
@@ -52,17 +48,19 @@ describe('Box Contradiction World', () => {
         expect(world.peek(doorA)).toBe(false);
         expect(world.peek(doorB)).toBe(false);
         expect(world.peek(doorC)).toBe(false);
-        box1.setValue(world, BoxLocations.DoorB);
+        world.set(box1, BoxLocations.DoorB);
         expect(world.get(doorB)).toBe(true);
+        // Observe box2's value, which is still the default of TravelRoom
+        expect(world.get(box2)).toBe(BoxLocations.TravelRoom);
         expect(world.travelTo(-1)).toBe(true);
 
         // The box is reset back in T-1
-        expect(box1.peekIfValueIs(world, BoxLocations.BoxRoom)).toBe(true);
+        expect(world.peek(box1)).toBe(BoxLocations.BoxRoom);
         expect(world.peek(doorB)).toBe(false);
-        box2.setValue(world, BoxLocations.DoorB);
+        world.set(box2, BoxLocations.DoorB);
         expect(world.get(doorB)).toBe(true);
         expect(world.peek(doorC)).toBe(false);
-        box1.setValue(world, BoxLocations.DoorC);
+        world.set(box1, BoxLocations.DoorC);
         expect(world.get(doorC)).toBe(true);
         world.set(lever1, true);
         // Can't go through yet; only open in T0
@@ -70,11 +68,15 @@ describe('Box Contradiction World', () => {
 
         // Can't go back yet b/c boxes are in contradictory locations
         expect(world.canTravelTo(0)).toBe(false);
-        box1.setValue(world, BoxLocations.BoxRoom);
+        world.set(box1, BoxLocations.BoxRoom);
         // Still 1 box out of it's originally observed location
         expect(world.canTravelTo(0)).toBe(false);
-        box2.setValue(world, BoxLocations.TravelRoom);
+        world.set(box2, BoxLocations.TravelRoom);
         // Now both boxes are back in their original locations, so we can travel forward
+
+        // TODO: For some reason the T0 start state has
+        // doorB open, which shouldn't be the case, even if I explicitly
+        // observe it as closed at the start.
         expect(world.travelTo(0)).toBe(true);
 
         // Now we can go through the door to the goal

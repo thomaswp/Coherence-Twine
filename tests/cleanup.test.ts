@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { DerivedVariable, MutableVariable, PartialState, Variable, World } from '../ts/state';
+import { ConcreteState, DerivedVariable, MutableVariable, PartialState, World } from '../ts/state';
 
 type CleanUpSystem = {
     lever1: MutableVariable;
@@ -38,7 +38,7 @@ describe('CleanUp PartialState', () => {
         const { lever1, lever2, doorA, doorB, doorC, world } = createWorld();
         const state = new PartialState(
             world,
-            new Map<Variable, boolean>([
+            new ConcreteState([
                 [doorA, true],
                 [lever1, true],
                 [lever2, true],
@@ -53,7 +53,7 @@ describe('CleanUp PartialState', () => {
         const { lever1, lever2, doorA, doorB, doorC, world } = createWorld();
         const state = new PartialState(
             world,
-            new Map<Variable, boolean>([
+            new ConcreteState([
                 [doorA, true],
                 [lever1, false],
                 [lever2, true],

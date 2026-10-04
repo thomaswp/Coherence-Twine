@@ -1,10 +1,10 @@
 import { assert, describe, expect, it } from 'vitest';
 import {
+    ConcreteState,
     DerivedVariable,
     MutableVariable,
     PartialState,
     TriggeredVariable,
-    Variable,
     World,
 } from '../ts/state';
 
@@ -52,7 +52,7 @@ describe('PartialState', () => {
         const { lever1, lever2, doorA, doorB, doorC, world } = createRobotWorld();
         const state = new PartialState(
             world,
-            new Map<Variable, boolean>([
+            new ConcreteState([
                 // Should work with only the lever's state
                 // since the door is derived from it
                 [lever1, false],
@@ -72,7 +72,7 @@ describe('PartialState', () => {
         const { lever1, lever2, doorA, doorB, doorC, world } = createRobotWorld();
         const state = new PartialState(
             world,
-            new Map<Variable, boolean>([
+            new ConcreteState([
                 // Should open door A, which triggers door C
                 [lever1, false],
                 // but we say door C is closed, so contradiction
@@ -88,7 +88,7 @@ describe('PartialState', () => {
         const { lever1, lever2, doorA, doorB, doorC, world } = createRobotWorld();
         const state = new PartialState(
             world,
-            new Map<Variable, boolean>([
+            new ConcreteState([
                 // We know at _some_ point door A was opened, but it
                 // may no longer be, so nothing should be forced
                 [doorC, true],
@@ -105,7 +105,7 @@ describe('PartialState', () => {
         const { lever1, lever2, doorA, doorB, doorC, world } = createRobotWorld();
         const state = new PartialState(
             world,
-            new Map<Variable, boolean>([
+            new ConcreteState([
                 // Contradicts default value for L1
                 // and should cause door C to open
                 [doorA, true],

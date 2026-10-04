@@ -15,7 +15,13 @@ function createRobotWorld() {
     const robotGoal = new TriggeredVariable(
         'robotAtGoal',
         [doorA, doorB, doorC],
-        (state) => state.get(doorC) && (state.get(doorA) || state.get(doorB)),
+        (state) => {
+            return (
+                (state.get(doorC) as boolean | undefined) &&
+                ((state.get(doorA) as boolean | undefined) ||
+                    (state.get(doorB) as boolean | undefined))
+            );
+        },
         false,
     );
 

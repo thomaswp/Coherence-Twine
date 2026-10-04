@@ -1,13 +1,13 @@
 import { assert, describe, expect, it } from 'vitest';
 import { createBooleanWorld } from '../ts/level/levels/boolean';
-import { PartialState, Variable } from '../ts/state';
+import { ConcreteState, PartialState } from '../ts/state';
 
 describe('PartialState', () => {
     it('finds consistency', () => {
         const { lever1, lever2, doorC: doorB, doorB: doorC, world } = createBooleanWorld();
         const state = new PartialState(
             world,
-            new Map<Variable, boolean>([
+            new ConcreteState([
                 [lever1, false],
                 [doorC, true],
             ]),

@@ -6,28 +6,62 @@ function oneline(strings: TemplateStringsArray, ...values: any[]) {
         .join(' ');
 }
 
-export abstract class Variable {
+interface IVariable {
+    readonly name: string;
+}
+
+export abstract class Variable<T> implements IVariable {
+    // Use the generic parameter so it can be recognized by the TS compiler
+    declare readonly _type?: T;
+
     constructor(public readonly name: string) {}
 }
 
-export class MutableVariable extends Variable {
+// TODO: Rename
+abstract class MutableVariableBase<T> extends Variable<T> {
     constructor(
         name: string,
-        public readonly defaultValue: boolean,
+        public readonly defaultValue: T,
         public readonly reversible = true,
     ) {
         super(name);
     }
+
+    /**
+     * Used when binding unobserved variables to search for alternative values.
+     * Should return a list of all possible states for this variable.
+     */
+    abstract possibleStates(): T[];
+}
+
+export class MutableVariable extends MutableVariableBase<boolean> {
+    possibleStates(): boolean[] {
+        return [true, false];
+    }
+}
+
+export class NominalVariable extends MutableVariableBase<string> {
+    constructor(
+        name: string,
+        public readonly possibleValues: string[],
+        defaultValue: string,
+    ) {
+        super(name, defaultValue);
+    }
+
+    possibleStates(): string[] {
+        return this.possibleValues;
+    }
 }
 
 interface DependentVariable {
-    isDependentOn(variable: Variable): boolean;
+    isDependentOn(variable: IVariable): boolean;
 }
 
-export class DerivedVariable extends Variable implements DependentVariable {
+export class DerivedVariable extends Variable<boolean> implements DependentVariable {
     constructor(
         name: string,
-        public readonly dependencies: MutableVariable[],
+        public readonly dependencies: IVariable[],
         // Allow undefined so we don't have to assert each expected variable
         // exists in the lambda.
         private readonly getValue: (state: ConcreteState) => boolean | undefined,
@@ -35,8 +69,8 @@ export class DerivedVariable extends Variable implements DependentVariable {
         super(name);
     }
 
-    isDependentOn(variable: Variable): boolean {
-        return this.dependencies.includes(variable as MutableVariable);
+    isDependentOn(variable: IVariable): boolean {
+        return this.dependencies.includes(variable);
     }
 
     deriveValue(state: ConcreteState) {
@@ -124,74 +158,11 @@ export class NumericVariableProxy implements IVariableProxy {
     }
 }
 
-export class DiscreteVariableProxy implements IVariableProxy {
-    public readonly variables: readonly MutableVariable[];
-
-    constructor(
-        public readonly name: string,
-        public readonly values: readonly string[],
-        public readonly defaultValueIndex: number = 0,
-    ) {
-        this.variables = values.map(
-            (v, i) => new MutableVariable(`${name}_${v}`, i === defaultValueIndex, true),
-        );
-    }
-
-    isInValidState(state: ConcreteState): boolean {
-        // Exactly one of the variables should be true
-        return this.variables.reduce((acc, v) => acc + (state.get(v) ? 1 : 0), 0) === 1;
-    }
-
-    peekIfValueIs(world: World, value: string): boolean {
-        return this.checkIfValueIs(world, value, 'peek');
-    }
-
-    getIfValueIs(world: World, value: string): boolean {
-        return this.checkIfValueIs(world, value, 'get');
-    }
-
-    private checkIfValueIs(world: World, value: string, method: 'get' | 'peek'): boolean {
-        const getMethod = method === 'get' ? world.get.bind(world) : world.peek.bind(world);
-        const index = this.values.indexOf(value);
-        if (index === -1) {
-            throw new Error(`Value ${value} is not valid for discrete variable ${this.name}`);
-        }
-        const result = getMethod(this.variables[index]);
-        // If we observe that this discrete variable has a specific value
-        // we've inherently observed that it doesn't have any other values.
-        if (result) {
-            for (const v of this.variables) {
-                getMethod(v);
-            }
-        }
-        return result;
-    }
-
-    peekValue(state: ConcreteState): string | undefined {
-        for (let i = 0; i < this.variables.length; i++) {
-            if (state.get(this.variables[i])) {
-                return this.values[i];
-            }
-        }
-        return undefined;
-    }
-
-    setValue(world: World, value: string) {
-        const index = this.values.indexOf(value);
-        if (index === -1) {
-            throw new Error(`Value ${value} is not valid for discrete variable ${this.name}`);
-        }
-        for (let i = 0; i < this.variables.length; i++) {
-            world.set(this.variables[i], i === index);
-        }
-    }
-}
-
-export class TriggeredVariable extends Variable implements DependentVariable {
+export class TriggeredVariable extends Variable<boolean> implements DependentVariable {
     constructor(
         name: string,
         // Dependencies are mutable or derived
-        public readonly dependencies: Variable[],
+        public readonly dependencies: IVariable[],
         private readonly isTriggered: (state: ConcreteState) => boolean | undefined,
         /**
          * If false, the triggered variable resets to its default value when
@@ -202,7 +173,7 @@ export class TriggeredVariable extends Variable implements DependentVariable {
         super(name);
     }
 
-    isDependentOn(variable: Variable): boolean {
+    isDependentOn(variable: IVariable): boolean {
         for (let dep of this.dependencies) {
             if (dep === variable) return true;
             if (dep instanceof DerivedVariable || dep instanceof TriggeredVariable) {
@@ -223,8 +194,45 @@ function copyMap<Q, P>(map: Map<Q, P>) {
     return new Map<Q, P>(map);
 }
 
-// Contains values for all variables
-type ConcreteState = Map<Variable, boolean>;
+class ReadonlyConcreteState {
+    protected map = new Map<Variable<any>, any>();
+
+    constructor(entries?: Iterable<[Variable<any>, any]>) {
+        if (entries) {
+            this.map = new Map<Variable<any>, any>(entries);
+        }
+    }
+
+    get<T>(key: Variable<T>): T | undefined {
+        return this.map.get(key);
+    }
+
+    has<T>(key: Variable<T>): boolean {
+        return this.map.has(key);
+    }
+
+    entries(): IterableIterator<[Variable<any>, any]> {
+        return this.map.entries();
+    }
+}
+
+export class ConcreteState extends ReadonlyConcreteState {
+    set<T>(key: Variable<T>, value: T): void {
+        this.map.set(key, value);
+    }
+
+    delete(variable: IVariable) {
+        this.map.delete(variable);
+    }
+
+    copy(): ConcreteState {
+        const newState = new ConcreteState();
+        for (const [key, value] of this.map.entries()) {
+            newState.set(key, value);
+        }
+        return newState;
+    }
+}
 
 function inspectState(state: ConcreteState | null) {
     if (!state) return null;
@@ -232,15 +240,15 @@ function inspectState(state: ConcreteState | null) {
 }
 
 export class PartialState {
-    protected readonly observedValues: Map<Variable, boolean>;
+    protected readonly observedValues: ConcreteState;
 
     constructor(
         readonly world: World,
-        observedValues: Map<Variable, boolean> = new Map(),
+        observedValues: ConcreteState = new ConcreteState(),
         /** If true, triggers must match explicitly */
         public resolveMissingTriggers = false,
     ) {
-        this.observedValues = copyMap(observedValues);
+        this.observedValues = observedValues.copy();
     }
 
     equals(other: PartialState): boolean {
@@ -257,8 +265,8 @@ export class PartialState {
         return true;
     }
 
-    getObservedValues() {
-        return this.observedValues as ReadonlyMap<Variable, boolean>;
+    getObservedValues(): ReadonlyConcreteState {
+        return this.observedValues;
     }
 
     get mutableVariables() {
@@ -285,14 +293,19 @@ export class PartialState {
 
         const mutableVars = this.mutableVariables.filter((mv) => !this.observedValues.has(mv));
 
+        // For each unobserved mutable variable, try each possible value
+        // and see if it resolves the contradiction
         for (const mv of mutableVars) {
             const state = this.copy();
-            // Since we know the default value doesn't work
-            // try the opposite
-            state.observedValues.set(mv, !mv.defaultValue);
-            // console.log(`Altering ${mv.name} -> ${!mv.defaultValue}`);
-            const ps = state.findConsistentState();
-            if (ps != null) return ps;
+            for (const value of mv.possibleStates()) {
+                // No point in checking the default value, since we
+                // already know that doesn't work
+                if (value === mv.defaultValue) continue;
+                state.observedValues.set(mv, value);
+                // console.log(`Altering ${mv.name} -> ${!mv.defaultValue}`);
+                const ps = state.findConsistentState();
+                if (ps != null) return ps;
+            }
         }
         return null;
     }
@@ -303,7 +316,7 @@ export class PartialState {
      * @param variable
      * @returns
      */
-    getConcreteValue(variable: Variable): boolean {
+    getConcreteValue<T>(variable: Variable<T>): T {
         if (this.observedValues.has(variable)) {
             return this.observedValues.get(variable)!;
         }
@@ -321,7 +334,7 @@ export class PartialState {
 
     toConcreteState(): ConcreteState | null {
         // Start with observations
-        const state = copyMap(this.observedValues);
+        const state = this.observedValues.copy();
         // The add default values for
         for (const mv of this.mutableVariables) {
             if (!state.has(mv)) {
@@ -418,13 +431,13 @@ export class MutablePartialState extends PartialState {
 export class World {
     timePeriods = new Map<number, TimePeriod>();
     currentPeriod: TimePeriod;
-    public readonly variables: readonly Variable[];
-    public readonly mutableVariables: readonly MutableVariable[];
+    public readonly variables: readonly IVariable[];
+    public readonly mutableVariables: readonly MutableVariableBase<any>[];
     public readonly derivedVariables: readonly DerivedVariable[];
     public readonly triggeredVariables: readonly TriggeredVariable[];
 
     constructor(
-        variables: Variable[],
+        variables: IVariable[],
         public readonly proxyVariables: IVariableProxy[] = [],
         currentTime: number = 0,
     ) {
@@ -439,8 +452,8 @@ export class World {
         this.currentPeriod = new TimePeriod(this, currentTime);
         this.timePeriods.set(currentTime, this.currentPeriod);
         this.mutableVariables = this.variables.filter(
-            (v) => v instanceof MutableVariable,
-        ) as MutableVariable[];
+            (v) => v instanceof MutableVariableBase,
+        ) as MutableVariableBase<any>[];
         this.derivedVariables = this.variables.filter(
             (v) => v instanceof DerivedVariable,
         ) as DerivedVariable[];
@@ -485,7 +498,7 @@ export class World {
         return this.timePeriods.get(nextTime)!;
     }
 
-    set(variable: MutableVariable, value: boolean, observeFirst = true, observeAfter = true) {
+    set<T>(variable: MutableVariableBase<T>, value: T, observeFirst = true, observeAfter = true) {
         if (observeFirst) {
             this.get(variable);
         }
@@ -513,7 +526,7 @@ export class World {
         this.checkForTriggeredVariables(variable);
     }
 
-    private shouldVariableTrigger(updatedVariable: Variable, triggered: TriggeredVariable) {
+    private shouldVariableTrigger(updatedVariable: IVariable, triggered: TriggeredVariable) {
         if (
             triggered.isDependentOn(updatedVariable) &&
             // This should only be true if we know it's already been triggered
@@ -527,20 +540,20 @@ export class World {
         return false;
     }
 
-    private getTriggeredVariables(updatedVariable: Variable) {
+    private getTriggeredVariables(updatedVariable: IVariable) {
         return this.triggeredVariables.filter((tv) =>
             this.shouldVariableTrigger(updatedVariable, tv),
         );
     }
 
-    checkForTriggeredVariables(updatedVariable: Variable) {
+    checkForTriggeredVariables(updatedVariable: IVariable) {
         this.getTriggeredVariables(updatedVariable).forEach((tv) => {
             // console.log(`Triggered variable ${tv.name} activated at time ${this.currentTime}`);
             this.currentPeriod.variableWasTriggered(tv);
         });
     }
 
-    peek(variable: Variable): boolean {
+    peek<T>(variable: Variable<T>): T {
         // Should only happen for MutableVariables
         const value = this.currentPeriod.peekValue(variable);
         if (value !== undefined) {
@@ -559,8 +572,15 @@ export class World {
         return state.getConcreteValue(variable);
     }
 
+    // TODO: For non-boolean variables, this current means any
+    // observation requires that the exact value is observed, but
+    // sometimes you can observe what a value _isn't_ without knowing
+    // what it is; there's not way to support that currently. E.g.,
+    // you might know a box isn't in a location w/o knowing where it is
+    // and that might have some consequences for reconciliation.
+
     /** Note: Always observes. Use peek for non-observing get. */
-    get(variable: Variable) {
+    get<T>(variable: Variable<T>): T {
         const value = this.peek(variable);
         this.currentPeriod.variableWasObserved(variable, value);
         return value;
@@ -771,7 +791,7 @@ export class World {
     }
 
     private tryMergeStates(past: ConcreteState, present: ConcreteState): ConcreteState | null {
-        const state = new Map<Variable, boolean>(past);
+        const state = past.copy();
         for (let [key, value] of present.entries()) {
             const lastValue = state.get(key);
             if (lastValue !== undefined && lastValue !== value) {
@@ -786,7 +806,7 @@ export class World {
     }
 }
 
-type VarState = {
+type VarState<T> = {
     // Would be good to actually calculate if it *was* modified but this
     // approach is a good heuristic, is way easier and shouldn't ruin any puzzles
     /** Could this variable have been modified from its starting value? */
@@ -794,20 +814,20 @@ type VarState = {
     /** Could this variable have been modified since it's last observation? */
     couldHaveBeenModifiedSinceObserved: boolean;
     /** The first value observed for this variable, before any modification, with its starting value. */
-    observedStartValue: boolean | undefined;
+    observedStartValue: T | undefined;
     // Pretty much always the regular default value unless traveling forward
     // to a previously unseen time period
     /** A fixed starting value for this variable, if known. */
-    startValue: boolean | undefined;
+    startValue: T | undefined;
     /** The most recent observed value for this variable, or unknown if currently unobserved.
      * Only appropriate for MutableVariables where setting is direct.
      */
-    currentValue: boolean | undefined;
+    currentValue: T | undefined;
     /**
      * The last observed value for this variable, or unknown if it could have changed since its last
      * observation.
      */
-    lastObservedValue: boolean | undefined;
+    lastObservedValue: T | undefined;
 };
 
 type TriggeringState = {
@@ -815,10 +835,10 @@ type TriggeringState = {
 };
 
 export class TimePeriod {
-    private varStates = new Map<Variable, VarState>();
+    private varStates = new Map<IVariable, VarState<any>>();
     public readonly antecedents = new Map<TriggeredVariable, TriggeringState>();
 
-    private getState(variable: Variable) {
+    private getState(variable: IVariable) {
         return this.varStates.get(variable)!;
     }
 
@@ -834,7 +854,7 @@ export class TimePeriod {
         // could change if we went back again and forward again...
         // But then I assume backwards travel would be prevented to
         // prevent a contradiction.
-        startValues: ConcreteState = new Map<Variable, boolean>(),
+        startValues: ConcreteState = new ConcreteState(),
     ) {
         for (let v of world.variables) {
             this.varStates.set(v, {
@@ -859,7 +879,7 @@ export class TimePeriod {
      * should not have been previously observed, nor have we locked in
      * a start value.
      */
-    overwriteStartState(variable: Variable, value: boolean) {
+    overwriteStartState<T>(variable: Variable<T>, value: T) {
         const state = this.getState(variable);
         if (state.startValue !== undefined) {
             throw Error(
@@ -891,19 +911,19 @@ export class TimePeriod {
      * Returns the last observed value for the variable, or a known start value if present.
      * Does not return the variable's default value.
      */
-    peekValue(variable: Variable): boolean | undefined {
+    peekValue<T>(variable: Variable<T>): T | undefined {
         const state = this.getState(variable);
         return state.currentValue ?? state.startValue;
     }
 
-    variableWasObserved(variable: Variable, value: boolean) {
+    variableWasObserved<T>(variable: Variable<T>, value: T) {
         const state = this.getState(variable);
         if (!state.couldHaveBeenModifiedAfterStart) state.observedStartValue = value;
         state.couldHaveBeenModifiedSinceObserved = false;
         state.lastObservedValue = value;
     }
 
-    variableWasModified(modified: MutableVariable | TriggeredVariable, value: boolean) {
+    variableWasModified<T>(modified: MutableVariableBase<T> | TriggeredVariable, value: T) {
         const state = this.getState(modified);
         state.couldHaveBeenModifiedAfterStart = true;
         state.couldHaveBeenModifiedSinceObserved = true;
@@ -927,7 +947,7 @@ export class TimePeriod {
 
     variableWasTriggered(variable: TriggeredVariable) {
         this.variableWasModified(variable, true);
-        const observedDependencies: ConcreteState = new Map();
+        const observedDependencies: ConcreteState = new ConcreteState();
         for (let [v, vState] of this.varStates.entries()) {
             if (!variable.isDependentOn(v)) continue;
             // If this variable hasn't been modified and we haven't observed its start value,
@@ -948,21 +968,23 @@ export class TimePeriod {
         });
     }
 
-    private updateCouldHaveBeenObserved(variable: DerivedVariable) {
-        let maybeModified = false;
-        for (let v of variable.dependencies) {
-            const state = this.getState(v);
-            const defaultValue = state.startValue ?? v.defaultValue;
-            if (state.currentValue !== defaultValue) {
-                maybeModified = true;
-                break;
-            }
-        }
-        this.getState(variable).couldHaveBeenModifiedAfterStart = maybeModified;
-    }
+    // Currently unused and has some problematic assumptions about
+    // defaultValue so removing for now...
+    // private updateCouldHaveBeenObserved(variable: DerivedVariable) {
+    //     let maybeModified = false;
+    //     for (let v of variable.dependencies) {
+    //         const state = this.getState(v);
+    //         const defaultValue = state.startValue ?? v.defaultValue;
+    //         if (state.currentValue !== defaultValue) {
+    //             maybeModified = true;
+    //             break;
+    //         }
+    //     }
+    //     this.getState(variable).couldHaveBeenModifiedAfterStart = maybeModified;
+    // }
 
     toPartialConcreteEndState() {
-        const state = new Map<Variable, boolean>();
+        const state = new ConcreteState();
         for (let v of this.world.variables) {
             const vState = this.getState(v);
             const value = vState.currentValue;
@@ -979,7 +1001,7 @@ export class TimePeriod {
     }
 
     toPartialConcreteStartState() {
-        const state = new Map<Variable, boolean>();
+        const state = new ConcreteState();
         for (let v of this.world.variables) {
             const vState = this.getState(v);
             if (vState.observedStartValue !== undefined) {

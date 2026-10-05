@@ -537,6 +537,18 @@ export class World {
     // what it is; there's not way to support that currently. E.g.,
     // you might know a box isn't in a location w/o knowing where it is
     // and that might have some consequences for reconciliation.
+    // This is partially implemented below, but I haven't implemented reconciliation
+    // yet and there's lots of other potential side-effects to think of.
+
+    getHasValue<T>(variable: Variable<T>, checkedValue: T): boolean {
+        const value = this.peek(variable);
+        if (value === checkedValue) {
+            this.currentPeriod.variableWasObserved(variable, value);
+        } else {
+            this.currentPeriod.variableWasObservedAsNot(variable, checkedValue);
+        }
+        return value === checkedValue;
+    }
 
     /** Note: Always observes. Use peek for non-observing get. */
     get<T>(variable: Variable<T>): T {
@@ -774,6 +786,7 @@ type VarState<T> = {
     couldHaveBeenModifiedSinceObserved: boolean;
     /** The first value observed for this variable, before any modification, with its starting value. */
     observedStartValue: T | undefined;
+    observedStartNonValues: Set<T>;
     // Pretty much always the regular default value unless traveling forward
     // to a previously unseen time period
     /** A fixed starting value for this variable, if known. */
@@ -823,6 +836,7 @@ export class TimePeriod {
                 startValue: startValues.get(v),
                 currentValue: undefined,
                 lastObservedValue: undefined,
+                observedStartNonValues: new Set(),
             });
         }
     }
@@ -882,6 +896,15 @@ export class TimePeriod {
         }
         state.couldHaveBeenModifiedSinceObserved = false;
         state.lastObservedValue = value;
+    }
+
+    variableWasObservedAsNot<T>(variable: Variable<T>, value: T) {
+        const state = this.getState(variable);
+        if (!state.couldHaveBeenModifiedAfterStart && state.observedStartValue === undefined) {
+            state.observedStartNonValues.add(value);
+            // TODO: Need to do something if all but one value has been observed as not,
+            // but currently we don't actually implement possible values for non-mutable variables.
+        }
     }
 
     variableWasModified<T>(modified: MutableVariableBase<T> | TriggeredBoolean, value: T) {

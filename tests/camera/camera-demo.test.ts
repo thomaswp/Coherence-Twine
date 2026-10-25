@@ -31,6 +31,18 @@ function createWorld() {
     };
 }
 
+/*
+TODO: Two main problems here:
+1) When we do reconciliation (including w/ buttons and cameras) we "observe" the
+   variables we are overwriting, which means they can't be changed in future reconciliations.
+2) Even if I don't do that, currently the toPartialConcreteEndState includes the current value,
+   regardless of whether it's been observed, which means an overwritten variable gets
+   added regardless of whether it observes.
+I've tried to start addressing this in camera-fiddles.
+
+Also, I'm not sure if it's necessary, but I don't have anything forcing the reconciled state
+to be compatible with observed values in reconcileStateWithFuture.
+*/
 describe('Camera Demo World', () => {
     it('has a solution', () => {
         const { lever1, lever2, lever3, button1, doorA, doorB, doorC, doorD, world } =

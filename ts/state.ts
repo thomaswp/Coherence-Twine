@@ -318,9 +318,14 @@ export class PartialState {
         return this.toConcreteState() == null;
     }
 
-    findConsistentState(): ConsistentPartialState | null {
+    findConsistentState(
+        criterion: (concreteState: ConcreteState) => boolean = () => true,
+    ): ConsistentPartialState | null {
         // console.log("Checking for consistency", this.observedValues);
-        if (!this.isDefaultContradictory()) return this.asConsistent();
+        const concreteState = this.toConcreteState();
+        if (concreteState && criterion(concreteState)) {
+            return this.asConsistent();
+        }
 
         const mutableVars = this.mutableVariables.filter((mv) => !this.observedValues.has(mv));
 
@@ -334,7 +339,7 @@ export class PartialState {
                 if (eq(value, mv.defaultValue)) continue;
                 state.observedValues.set(mv, value);
                 // console.log(`Altering ${mv.name} -> ${!mv.defaultValue}`);
-                const ps = state.findConsistentState();
+                const ps = state.findConsistentState(criterion);
                 if (ps != null) return ps;
             }
         }
@@ -536,6 +541,9 @@ export class World {
     }
 
     public reconcileStateWithNextTimePeriod() {
+        console.log(
+            `Reconciling state with next time period after irreversible action at time ${this.currentTime}`,
+        );
         const nextTime = this.getNextTimePeriod();
         if (nextTime) {
             // Modify the start state of the *current* time period, since
@@ -670,7 +678,11 @@ export class World {
         modifyFuture: boolean,
     ): boolean {
         const time = futurePeriod.time;
-        const currentState = this.currentPeriod.toPartialConcreteEndState();
+        // If we're modifying the present, we're actually modifying its *start* state, so the only
+        // part of its state that *has* to be consistent with the future are immutable variables and
+        // their downstream dependents.
+        const irreversibleOnly = !modifyFuture;
+        const currentState = this.currentPeriod.toPartialConcreteEndState(irreversibleOnly);
         const futureState = futurePeriod.toPartialConcreteStartState();
 
         for (const tv of this.triggeredVariables) {
@@ -687,9 +699,32 @@ export class World {
             return false;
         }
 
+        let isCompatible = (_: ConcreteState) => true;
+        if (false && irreversibleOnly) {
+            const observedPresentStartState = this.currentPeriod.toPartialConcreteStartState();
+            console.log(
+                `Present start state (irreversible only)`,
+                inspectState(observedPresentStartState),
+            );
+            isCompatible = (concreteState: ConcreteState) => {
+                for (const [k, v] of observedPresentStartState.entries()) {
+                    if (concreteState.has(k) && concreteState.get(k) !== v) {
+                        return false;
+                    }
+                }
+                return true;
+            };
+        }
+
         const partialState = new PartialState(this, mergedState);
-        const consistentStatePreTriggers = partialState.findConsistentState();
+        const consistentStatePreTriggers = partialState.findConsistentState(isCompatible);
         console.log(`### ${dryRun ? 'Testing reconciliation' : 'Reconciling'} with t${time}`);
+        if (irreversibleOnly) {
+            console.log(
+                `Full Present partial state (before excluding reversible variables)`,
+                inspectState(this.currentPeriod.toPartialConcreteEndState()),
+            );
+        }
         console.log(`Present partial state`, inspectState(currentState));
         console.log('Future partial state', inspectState(futureState));
 
@@ -702,15 +737,8 @@ export class World {
             consistentStatePreTriggers.inspect(),
         );
 
-        // The consistent state looks for differences between the end of the past
-        // and the start of the future, which need to be reconciled. We can do that
-        // the start state of the appropriate time period.
-        const stateToVerify = modifyFuture ? futureState : currentState;
-        const periodToModify = modifyFuture ? futurePeriod : this.currentPeriod;
-
         // We resolve antecedents before modifying any states.
         // This means that antecedent modifications happen first
-
         const consistentState = this.resolveAntecedents(futurePeriod, consistentStatePreTriggers);
         if (!consistentState) {
             // resolveAntecedents already logs the reason
@@ -720,30 +748,54 @@ export class World {
             console.log('Found consistent state after triggers:', consistentState.inspect());
         }
 
-        if (!dryRun) {
+        if (dryRun) return true;
+
+        if (!modifyFuture) {
             for (let v of this.variables) {
-                const oldValue = stateToVerify.get(v);
-                // TODO: Is this guaranteed to be defined?
+                const oldValue = futureState.get(v);
                 const newValue = consistentState.getObservedValues().get(v)!;
 
-                if (neq(oldValue, newValue)) {
-                    // Consider overwriting the start state of the current period if
-                    // overriding the future, since the past must carry through
-                    // to the future. But only if it hasn't been observed and would not create a
-                    // contradiction with the variables that have been observed in the current
-                    // start state.
-                    if (periodToModify !== this.currentPeriod) {
-                        const currentStartState = this.currentPeriod.toPartialConcreteStartState();
-                        if (!currentStartState.has(v)) {
-                            currentStartState.set(v, newValue);
-                            const partialCurrentStart = new PartialState(this, currentStartState);
-                            if (!partialCurrentStart.isDefaultContradictory()) {
-                                this.currentPeriod.overwriteStartState(v, newValue);
-                            }
-                        }
-                    }
-                    periodToModify.overwriteStartState(v, newValue);
+                if (eq(oldValue, newValue)) continue;
+                if (eq(newValue, currentState.get(v))) continue;
+                // If a value has changed from its value in the future and didn't come from merging,
+                // with the current state, we need to update it in the present.
+
+                if (this.currentPeriod.getVarState(v).observedStartValue !== undefined) {
+                    // The consistent state somehow modified observed values, despite the
+                    // criterion that they should be compatible, so this is an error, not a
+                    // reconciliation failure.
+                    throw Error(
+                        oneline`Cannot reconcile with time ${time} because of a contradiction from 
+                        already observed variable ${v.name}: ${oldValue} -> ${newValue}`,
+                    );
                 }
+                this.currentPeriod.overwriteStartState(v, newValue);
+                // TODO: Consider also updating the future? Not sure its necessary, and may
+                // be covered when you travel back to it.
+            }
+            return true;
+        }
+
+        for (let v of this.variables) {
+            const oldValue = futureState.get(v);
+            // TODO: Is this guaranteed to be defined?
+            const newValue = consistentState.getObservedValues().get(v)!;
+
+            if (neq(oldValue, newValue)) {
+                // Consider overwriting the start state of the current period if
+                // overriding the future, since the past must carry through
+                // to the future. But only if it hasn't been observed and would not create a
+                // contradiction with the variables that have been observed in the current
+                // start state.
+                const currentStartState = this.currentPeriod.toPartialConcreteStartState();
+                if (!currentStartState.has(v)) {
+                    currentStartState.set(v, newValue);
+                    const partialCurrentStart = new PartialState(this, currentStartState);
+                    if (!partialCurrentStart.isDefaultContradictory()) {
+                        this.currentPeriod.overwriteStartState(v, newValue);
+                    }
+                }
+                futurePeriod.overwriteStartState(v, newValue);
             }
         }
 
@@ -1034,9 +1086,13 @@ export class TimePeriod {
     //     this.getState(variable).couldHaveBeenModifiedAfterStart = maybeModified;
     // }
 
-    toPartialConcreteEndState() {
+    toPartialConcreteEndState(irreversibleOnly = false): ConcreteState {
         const state = new ConcreteState();
         for (let v of this.world.variables) {
+            if (irreversibleOnly && !(v instanceof MutableVariableBase && v.reversible)) {
+                // We only want to include irreversible variables, so skip this one
+                continue;
+            }
             const vState = this.getState(v);
             const value = vState.currentValue;
             if (value !== undefined && !vState.couldHaveBeenModifiedSinceObserved) {

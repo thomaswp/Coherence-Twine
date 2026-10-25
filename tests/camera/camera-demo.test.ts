@@ -2,8 +2,9 @@ import { describe, expect, it } from 'vitest';
 import { DerivedBoolean, MutableBoolean, World } from '../../ts/state';
 
 function createWorld() {
-    const lever1 = new MutableBoolean('lever1', true);
-    const lever2 = new MutableBoolean('lever2', false);
+    // Despite being levers, these two are inaccessible and therefore immutable.
+    const lever1 = new MutableBoolean('lever1', true, false);
+    const lever2 = new MutableBoolean('lever2', false, false);
     const lever3 = new MutableBoolean('lever3', false);
     const button1 = new MutableBoolean('button1', false, false);
     const doorA = new DerivedBoolean('doorAOpen', [lever1, lever3], (state) => {

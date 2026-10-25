@@ -12,17 +12,20 @@ graph LR
 ```
 
 Buttons:
-* B1: Off
+
+- B1: Off
 
 Doors:
-* A-C: B1 && random
+
+- A-C: B1 && random
 
 Observables:
-* RG: B1 && (A || B)
 
+- RG: B1 && (A || B)
 
 Solution:
-* Observe ~RG
-* Travel to T-1
-* Press B1 --> C opens
-* Goal
+
+- Observe ~RG
+- Travel to T-1
+- Press B1 --> C opens
+- Goal

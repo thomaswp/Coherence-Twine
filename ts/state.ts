@@ -167,8 +167,62 @@ export class TriggeredBoolean extends Variable<boolean> implements DependentVari
     }
 }
 
-function copyMap<Q, P>(map: Map<Q, P>) {
-    return new Map<Q, P>(map);
+// Unlike the variable classes, the picture has state itself. It's just a convenience
+// class.
+class Picture<T> {
+    private value: T;
+    // TODO: This isn't really the right mechanism. It's more like we should keep track of a
+    // parallel world where we've observed the variable at this time, and then swap it in when
+    // the picture's viewed, to handle things like if whether the player knows the value.
+    // This would mostly matter if taking pictures in the past, not the future.
+    private firstObservation: boolean;
+
+    constructor(
+        public readonly world: World,
+        public readonly variable: Variable<T>,
+        public readonly time: number,
+    ) {
+        if (world.currentPeriod.time !== time) {
+            throw Error(
+                oneline`Cannot create picture for variable ${variable.name} at time ${time} 
+                because the world is at time ${world.currentTime}`,
+            );
+        }
+        this.value = world.peek(variable);
+        const varState = this.world.timePeriods.get(time)!.getVarState(variable);
+        this.firstObservation =
+            varState.observedStartValue === undefined && !varState.couldHaveBeenModifiedAfterStart;
+    }
+
+    peekValue(): T {
+        return this.value;
+    }
+
+    getValue(): T {
+        const timePeriod = this.world.timePeriods.get(this.time)!;
+        const varState = timePeriod.getVarState(this.variable);
+        if (this.firstObservation && varState.observedStartValue === undefined) {
+            // TODO: This probably isn't quite the right mechanism, since it's for resolution.
+            // (and it seems to set the current value too, which isn't what we want...)
+            timePeriod.overwriteStartState(this.variable, this.value);
+            // TODO: There's an issue with this reconciliation method: see note there
+
+            const currentPeriod = this.world.currentPeriod;
+            if (currentPeriod.time < this.time) {
+                if (currentPeriod.time + 1 === this.time) {
+                    console.log(`Reconciling time with next period after viewing picture.`);
+                    this.world.reconcileStateWithNextTimePeriod();
+                } else {
+                    // No idea what to do if there's a time period in between, since the
+                    // reconciliation would need to be between consecutive states. Maybe
+                    // handle it iteratively?
+                    throw Error(`Cannot reconcile state for picture at time ${this.time} 
+                        because the current time is ${currentPeriod.time}`);
+                }
+            }
+        }
+        return this.value;
+    }
 }
 
 class ReadonlyConcreteState {
@@ -457,6 +511,10 @@ export class World {
         return this.timePeriods.get(nextTime)!;
     }
 
+    public takePicture<T>(variable: Variable<T>): Picture<T> {
+        return new Picture(this, variable, this.currentTime);
+    }
+
     set<T>(variable: MutableVariableBase<T>, value: T, observeFirst = true, observeAfter = true) {
         if (observeFirst) {
             this.get(variable);
@@ -472,17 +530,21 @@ export class World {
         // Irreversible mutations and persistent triggered variables cannot be undone
         // so we have to resolve state now
         if (!variable.reversible || triggeredPersistentVars.length > 0) {
-            const nextTime = this.getNextTimePeriod();
-            if (nextTime) {
-                // Modify the start state of the *current* time period, since
-                // we aren't traveling forward yet.
-                // TODO: This shouldn't actually try to reconcile the _whole_ present
-                // state; just the part that's irreversible. Otherwise a reversible
-                // lever might cause a contradiction unnecessarily.
-                this.reconcileStateWithFuture(nextTime, false, false);
-            }
+            this.reconcileStateWithNextTimePeriod();
         }
         this.checkForTriggeredVariables(variable);
+    }
+
+    public reconcileStateWithNextTimePeriod() {
+        const nextTime = this.getNextTimePeriod();
+        if (nextTime) {
+            // Modify the start state of the *current* time period, since
+            // we aren't traveling forward yet.
+            // TODO: This shouldn't actually try to reconcile the _whole_ present
+            // state; just the part that's irreversible. Otherwise a reversible
+            // lever might cause a contradiction unnecessarily.
+            this.reconcileStateWithFuture(nextTime, false, false);
+        }
     }
 
     private shouldVariableTrigger(updatedVariable: IVariable, triggered: TriggeredBoolean) {
@@ -839,6 +901,10 @@ export class TimePeriod {
                 observedStartNonValues: new Set(),
             });
         }
+    }
+
+    getVarState(variable: IVariable): Readonly<VarState<any>> {
+        return this.varStates.get(variable)!;
     }
 
     // Shouldn't be needed; can keep private

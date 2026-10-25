@@ -1089,7 +1089,7 @@ export class TimePeriod {
     toPartialConcreteEndState(irreversibleOnly = false): ConcreteState {
         const state = new ConcreteState();
         for (let v of this.world.variables) {
-            if (irreversibleOnly && !(v instanceof MutableVariableBase && v.reversible)) {
+            if (irreversibleOnly && !(v instanceof MutableVariableBase && !v.reversible)) {
                 // We only want to include irreversible variables, so skip this one
                 continue;
             }
